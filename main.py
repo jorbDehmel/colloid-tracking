@@ -15,59 +15,66 @@ output_suffix: str = 'tracksexport.csv'
 
 
 # Standard deviation filter
-def sd_filter(freq):
+def sd_filter(freq: str) -> (float, float, float, float, float, float):
     try:
         # Match with file
-        file = freq + suffix
+        file: str = freq + suffix
 
-        data = pd.read_csv(folder + file)
+        data: pd.DataFrame = pd.read_csv(folder + file)
 
-        # Jordan filter
+        # Get track displacements from dataframe before
+        # it is overwritten
         displacement = data[['TRACK_DISPLACEMENT']]
         displacement = displacement.drop([0, 1, 2])
 
-        # Turn DF to Py list
+        # Turn DF to Py list for easy of use
         displacement_list: [float] = []
         for row in displacement:
-            for whatever in displacement[row]:
-                displacement_list.append(float(whatever))
+            for item in displacement[row]:
+                displacement_list.append(float(item))
 
-        to_drop_msd: [float] = msd_filter(displacement_list)
+        to_drop_msd, prefilter_msd = msd_filter(displacement_list)
+        to_drop_msd.sort()
+
+        for num, i in enumerate(to_drop_msd):
+            del displacement_list[i - num]
+
+        corrected_msd: float = msd(displacement_list)
 
         # Drop any item which was recommended to be dropped by the msd filter
         for ind in to_drop_msd:
             data = data.drop(ind + 3)
 
-        data = data[['TRACK_MEAN_SPEED']]
-        data = data.drop([0, 1, 2])
-        data = data.to_numpy()
+        data: pd.DataFrame = data[['TRACK_MEAN_SPEED']]
+        data: pd.DataFrame = data.drop([0, 1, 2])
+
+        data: np.ndArray = data.to_numpy()
         data = data.astype(float)
 
-        speedStd = np.std(data, axis=0)
-        meanSpeed = np.mean(data, axis=0)
+        speedStd: float = np.std(data, axis=0)
+        meanSpeed: float = np.mean(data, axis=0)
 
         # Filtering out data 2 StD away from the mean
-        r = len(data) + len(to_drop_msd)
+        r: int = len(data) + len(to_drop_msd)
 
         # Filtering out data
-        filtered_data = []
+        filtered_data: [float] = []
         for i in data:
             if (i >= meanSpeed - 2 * speedStd and i < meanSpeed + 2 * speedStd):
                 filtered_data.append(i)
 
         data = np.array(filtered_data)
-        rf = len(data)
-        percent = rf / r
-        count = r
+        rf: int = len(data)
+        percent: float = rf / r
 
         # Converting Unit from pixel/frame to um/s
-        meanSpeed = np.mean(data, axis=0)
+        meanSpeed: float = np.mean(data, axis=0)
         meanSpeed = meanSpeed * 4 * 0.32
 
-        speedStd = np.std(data, axis=0)
+        speedStd: float = np.std(data, axis=0)
         speedStd = speedStd * 4 * 0.32
 
-        return (meanSpeed, speedStd, percent, count)
+        return (meanSpeed, speedStd, percent, r, prefilter_msd, corrected_msd)
 
     except Exception as e:
         print('Failure:', e)
@@ -78,7 +85,7 @@ def sd_filter(freq):
 
 
 # Individual frequencies where anything below brownian is removed and outliers
-def brownian_filter(freq, bmean):
+def brownian_filter(freq: str, bmean: float) -> (float, float, float, float, float, float):
     try:
         # Match with file
         file = freq + suffix
@@ -92,10 +99,16 @@ def brownian_filter(freq, bmean):
         # Turn DF to Py list
         displacement_list: [float] = []
         for row in displacement:
-            for whatever in displacement[row]:
-                displacement_list.append(float(whatever))
+            for item in displacement[row]:
+                displacement_list.append(float(item))
 
-        to_drop_msd: [float] = msd_filter(displacement_list)
+        to_drop_msd, prefilter_msd = msd_filter(displacement_list)
+        to_drop_msd.sort()
+
+        for num, i in enumerate(to_drop_msd):
+            del displacement_list[i - num]
+
+        corrected_msd: float = msd(displacement_list)
 
         # Drop any item which was recommended to be dropped by the msd filter
         for ind in to_drop_msd:
@@ -141,7 +154,7 @@ def brownian_filter(freq, bmean):
         speedStd = np.std(data)
         speedStd = speedStd * 4 * 0.32
 
-        return (meanSpeed, speedStd, percent, count)
+        return (meanSpeed, speedStd, percent, count, prefilter_msd, corrected_msd)
 
     except Exception as e:
         print('Failure:', e)
@@ -152,29 +165,34 @@ def brownian_filter(freq, bmean):
 
 
 # Adding many frequencies to one array
-def freq_sweep(*args):
-    columns = ['Ave. Speed (um/s)', 'SD', '% Remaining', 'Initial Count']
+def freq_sweep(*args) -> None:
+    columns = ['Ave. Speed (um/s)', 'SD', '% Remaining',
+               'Initial Count', 'MSD', 'Filtered MSD']
     index = args
-    array = np.zeros((len(args), 4))
+    array = np.zeros((len(args), 6))
 
     successes: int = 0
 
     try:
         for i in range(0, len(args)):
             if (i == 0):
-                mSpeed, std, percent, count = sd_filter(args[0])
+                mSpeed, std, percent, count, msd, corrected_msd = sd_filter(
+                    args[0])
                 array[i, 0] = mSpeed
                 array[i, 1] = std
                 array[i, 2] = percent
                 array[i, 3] = count
-                i = i + 1
+                array[i, 4] = msd
+                array[i, 5] = corrected_msd
             else:
-                mSpeedb, stdb, percentb, count = brownian_filter(
+                mSpeedb, stdb, percentb, count, msd, corrected_msd = brownian_filter(
                     args[i], mSpeed)
                 array[i, 0] = mSpeedb
                 array[i, 1] = stdb
                 array[i, 2] = percentb
                 array[i, 3] = count
+                array[i, 4] = msd
+                array[i, 5] = corrected_msd
 
             successes += 1
 
@@ -196,7 +214,7 @@ def freq_sweep(*args):
 # deviations away from the Mean Squared Displacement.
 # Takes a list of displacements, and returns the
 # indices which should be dropped
-def msd_filter(displacements: [float]) -> [int]:
+def msd_filter(displacements: [float]) -> ([int], float):
     # Get msd
     mean: float = msd(displacements)
 
@@ -220,7 +238,7 @@ def msd_filter(displacements: [float]) -> [int]:
     # return [item for i, item in enumerate(displacements) if abs(
     #     msd_deviation(displacements, i, mean, std) < 2)]
 
-    return out
+    return out, mean
 
 
 # Return the mean squared displacement given a set of displacements
