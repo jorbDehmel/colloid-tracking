@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import os
 
+import matplotlib.pyplot as plt
+
 # Folder location
 folder: str = ''
 
@@ -36,8 +38,14 @@ def sd_filter(freq: str) -> (float, float, float, float, float, float):
         to_drop_msd, prefilter_msd = msd_filter(displacement_list)
         to_drop_msd.sort()
 
+        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
+        # plt.show()
+
         for num, i in enumerate(to_drop_msd):
             del displacement_list[i - num]
+
+        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
+        # plt.show()
 
         corrected_msd: float = msd(displacement_list)
 
@@ -105,8 +113,14 @@ def brownian_filter(freq: str, bmean: float) -> (float, float, float, float, flo
         to_drop_msd, prefilter_msd = msd_filter(displacement_list)
         to_drop_msd.sort()
 
+        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
+        # plt.show()
+
         for num, i in enumerate(to_drop_msd):
             del displacement_list[i - num]
+
+        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
+        # plt.show()
 
         corrected_msd: float = msd(displacement_list)
 
@@ -228,15 +242,18 @@ def msd_filter(displacements: [float]) -> ([int], float):
     for i in range(len(displacements)):
         num_std: float = msd_deviation(displacements, i, mean, std)
 
-        # print(item, 'is', num_std, 'std away from msd from',
+        # print(displacements[i] ** 2, 'is', num_std, 'std away from msd from',
         #       mean, 'where std is', std)
 
-        if abs(num_std) >= 2:
+        if num_std < -1:
             out.append(i)
 
     # If you want a one-liner:
     # return [item for i, item in enumerate(displacements) if abs(
     #     msd_deviation(displacements, i, mean, std) < 2)]
+
+    print('MSD filter recommended the removal of',
+          len(out), 'items out of', len(displacements))
 
     return out, mean
 
@@ -248,13 +265,11 @@ def msd(displacements: [float]) -> float:
 
 # Returns the number of standard deviations a certain displacement is above the msd
 def msd_deviation(displacements: [float], index: int, mean: float, std: float) -> float:
-    return (mean - (displacements[index] ** 2)) / std
+    return ((displacements[index] ** 2) - mean) / std
 
 
 # Returns the standard deviation from the msd of a set of displacements
 def msd_standard_deviation(displacements: [float], mean: float) -> float:
-    # If you want a one-liner:
-    # return (sum([(item - mean) ** 2 for item in displacements]) / len(displacements)) ** 0.5
 
     # Inner bit
     out: float = sum([(item - mean) ** 2 for item in displacements])
