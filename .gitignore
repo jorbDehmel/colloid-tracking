@@ -2,3 +2,6 @@ __pycache__/
 .vscode/
 test/
 tk
+*.png
+data.csv
+tracksexport.csv
