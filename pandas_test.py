@@ -3,11 +3,12 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from natsort import index_natsorted
-from os import sep
+from os import *
+from sys import *
 import time
 
-do_big_graphs: bool = True
+# Important dependency; Run `pip install natsort`
+from natsort import index_natsorted
 
 
 # Returns the distance between two points in a cartesian plane
@@ -19,9 +20,12 @@ def distance(x1: float, y1: float, x2: float, y2: float) -> float:
     return temp ** 0.5
 
 
+# Analyze a file with a given name, and return the results
 def do_file(name: str, do_graphs: bool = False) -> (float, float, float, float, float, float, float):
+    # Load file
     csv = pd.read_csv(name + "_spots.csv")
 
+    # Drop useless data (columns)
     csv.drop(axis=1, inplace=True, labels=[
              "SNR_CH1", "STD_INTENSITY_CH1", "CONTRAST_CH1",
              "MIN_INTENSITY_CH1", "MAX_INTENSITY_CH1",
@@ -30,24 +34,31 @@ def do_file(name: str, do_graphs: bool = False) -> (float, float, float, float, 
              "POSITION_T", "LABEL", "POSITION_Z", "RADIUS",
              "ID"])
 
+    # Drop useless data (rows)
     csv.drop(axis=0, inplace=True, labels=[
         0, 1, 2])
 
+    # Sort values by ascending frame number
     csv.sort_values(by=["FRAME"], inplace=True,
                     key=lambda x: np.argsort(index_natsorted(csv["FRAME"])))
 
+    ''' 
+    # For debugging: Assert list is sorted by ascending frame number
     l = csv["FRAME"].astype(int).to_list()
-
     for i in range(1, len(l)):
         assert l[i] >= l[i - 1]
+    '''
 
+    # Sort data into bins by particle number
     bins: dict = {}
     for row in csv.iterrows():
+        # Turn raw pandas row into useful list
         row = row[1]
         row = [float(item) for item in row]
         row[0] = int(row[0])
         row[3] = int(row[3])
 
+        # If a bin for this particle ID does not already exist, create one
         if row[0] not in bins:
             bins[row[0]] = []
 
@@ -66,14 +77,18 @@ def do_file(name: str, do_graphs: bool = False) -> (float, float, float, float, 
     # In pixels per frame
     average_velocities: [float] = []
 
+    # Iterate over each particle
     for key in bins:
         disp: float = 0.0
         dist: float = 0.0
 
+        # Displacement; Cartesian distance between frame 0 and last frame
         disp = distance(bins[key][0][0], bins[key][0][1],
                         bins[key][-1][0], bins[key][-1][1])
 
         displacements.append(disp)
+
+        # Average net velocity: Displacement over number of frames
         average_velocities.append(disp / (bins[key][-1][2] - bins[key][0][2]))
 
         squared_displacement_sum += disp * disp
@@ -138,11 +153,14 @@ def do_file(name: str, do_graphs: bool = False) -> (float, float, float, float, 
 
 
 if __name__ == "__main__":
-
+    # Settings for graph savings
     do_little_graphs: bool = True
+    do_big_graphs: bool = True
 
+    # Which frequencies to scan
     frequencies: [int] = [0, 1, 5, 10, 25, 50, 75, 100]
 
+    # Internal string representation of the above freq
     names: [str] = [str(f) + "khz" for f in frequencies]
 
     array = np.zeros(shape=(len(names), 7))
@@ -181,6 +199,7 @@ if __name__ == "__main__":
     out_csv.to_csv("data.csv")
 
     if do_big_graphs:
+        # Displacement
         plt.clf()
         plt.plot(frequencies, mean_displacements)
 
@@ -194,6 +213,7 @@ if __name__ == "__main__":
 
         plt.savefig("displacements.png")
 
+        # Distance traveled
         plt.clf()
         plt.plot(frequencies, mean_distances)
 
@@ -207,6 +227,7 @@ if __name__ == "__main__":
 
         plt.savefig("distances.png")
 
+        # Velocities
         plt.clf()
         plt.plot(frequencies, mean_velocities)
 
@@ -220,6 +241,7 @@ if __name__ == "__main__":
 
         plt.savefig("velocities.png")
 
+        # MSD
         plt.clf()
         plt.plot(frequencies, mean_squared_displacements)
 
