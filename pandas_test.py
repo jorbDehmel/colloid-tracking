@@ -149,6 +149,46 @@ def do_file(name: str, do_graphs: bool = False) -> (float, float, float, float, 
 
     msd: float = squared_displacement_sum / len(bins)
 
+    # Do 5-number summary for data
+    disp_q1, disp_q3 = np.percentile(displacements, [25, 75])
+    disp_summary = [min(displacements), disp_q1,
+                    np.median(displacements), disp_q3,
+                    max(displacements)]
+    disp_iqr = disp_summary[3] - disp_summary[1]
+
+    dist_q1, dist_q3 = np.percentile(distances, [25, 75])
+    dist_summary = [min(distances), dist_q1,
+                    np.median(distances), dist_q3,
+                    max(displacements)]
+    dist_iqr = dist_summary[3] - dist_summary[1]
+
+    vel_q1, vel_q3 = np.percentile(average_velocities, [25, 75])
+    vel_summary = [min(average_velocities), vel_q1,
+                   np.median(average_velocities), vel_q3,
+                   max(average_velocities)]
+    vel_iqr = vel_summary[3] - vel_summary[1]
+
+    if do_graphs:
+        plt.clf()
+        plt.boxplot(displacements)
+        plt.title("Displacements in Pixels BoxPlot, " + name.replace("/", "_"))
+        plt.ylabel("Displacement (Pixels)")
+        plt.savefig("disp_bp_" + name.replace("/", "_") + ".png")
+
+        plt.clf()
+        plt.boxplot(distances)
+        plt.title("Distance Traveled in Pixels BoxPlot, " +
+                  name.replace("/", "_"))
+        plt.ylabel("Distance Traveled (Pixels)")
+        plt.savefig("dist_bp_" + name.replace("/", "_") + ".png")
+
+        plt.clf()
+        plt.boxplot(average_velocities)
+        plt.title("Average Velocity in Pixels / Frame BoxPlot, " +
+                  name.replace("/", "_"))
+        plt.ylabel("Average Velocity (Pixels per Frame)")
+        plt.savefig("vel_bp_" + name.replace("/", "_") + ".png")
+
     return (mean_disp, std_disp, mean_dist, std_dist, mean_vel, std_vel, msd)
 
 
@@ -204,7 +244,7 @@ if __name__ == "__main__":
         plt.plot(frequencies, mean_displacements)
 
         plt.title(
-            "Mean Particle Displacements by Applied Frequency\n(With Standard Deviations)")
+            "Mean Particle Displacements by Applied Frequency\n(With Standard Deviations As Bars)")
         plt.xlabel("Frequency (KiloHertz)")
         plt.ylabel("Displacement (Pixels)")
 

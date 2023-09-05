@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
 import os
 
 import matplotlib.pyplot as plt
@@ -35,23 +36,14 @@ def sd_filter(freq: str) -> (float, float, float, float, float, float):
             for item in displacement[row]:
                 displacement_list.append(float(item))
 
-        to_drop_msd, prefilter_msd = msd_filter(displacement_list)
+        # Do MSD filter
+        to_drop_msd, prefilter_msd = msd_filter_2(displacement_list)
+
         to_drop_msd.sort()
-
-        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
-        # plt.show()
-
         for num, i in enumerate(to_drop_msd):
             del displacement_list[i - num]
 
-        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
-        # plt.show()
-
         corrected_msd: float = msd(displacement_list)
-
-        # Drop any item which was recommended to be dropped by the msd filter
-        for ind in to_drop_msd:
-            data = data.drop(ind + 3)
 
         data: pd.DataFrame = data[['TRACK_MEAN_SPEED']]
         data: pd.DataFrame = data.drop([0, 1, 2])
@@ -110,23 +102,14 @@ def brownian_filter(freq: str, bmean: float) -> (float, float, float, float, flo
             for item in displacement[row]:
                 displacement_list.append(float(item))
 
-        to_drop_msd, prefilter_msd = msd_filter(displacement_list)
+        # Do MSD filter
+        to_drop_msd, prefilter_msd = msd_filter_2(displacement_list)
+
         to_drop_msd.sort()
-
-        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
-        # plt.show()
-
         for num, i in enumerate(to_drop_msd):
             del displacement_list[i - num]
 
-        # plt.hist(displacement_list, color='lightgreen', ec='black', bins=15)
-        # plt.show()
-
         corrected_msd: float = msd(displacement_list)
-
-        # Drop any item which was recommended to be dropped by the msd filter
-        for ind in to_drop_msd:
-            data = data.drop(ind + 3)
 
         data = data[['TRACK_MEAN_SPEED']]
 
@@ -220,6 +203,16 @@ def freq_sweep(*args) -> None:
 
     df.to_csv(folder + output_suffix)
 
+    plt.clf()
+    plt.plot(df["Ave. Speed (um/s)"])
+    plt.title("Ave. Speed (um/s)")
+    plt.savefig("speeds.png")
+
+    plt.clf()
+    plt.plot(df["MSD"])
+    plt.title("Mean Squared Displacement (Square Pixels)")
+    plt.savefig("msd.png")
+
     return
 
 
@@ -282,6 +275,42 @@ def msd_standard_deviation(displacements: [float], mean: float) -> float:
 
     # Return
     return out
+
+
+# Mean squared displacement filter 2
+# Filters items beyond 1.5 IQR rather than beyond 2 Standard deviation
+def msd_filter_2(displacements: [float]) -> ([int], float):
+    mean: float = msd(displacements)
+
+    squared_displacements: [float] = [item ** 2 for item in displacements]
+
+    # Get Q1 and Q3 boundaries
+    q1, q3 = np.percentile(squared_displacements, [25, 75])
+
+    # Compute IQR
+    iqr: float = q3 - q1
+
+    # Compute min and max range
+    min_val: float = q1 - iqr
+    max_val: float = q3 + iqr
+
+    # Create to_drop list
+    to_drop: [int] = []
+
+    below, above = 0, 0
+
+    for i, item in enumerate(squared_displacements):
+        if item < min_val:
+            to_drop.append(i)
+            below += 1
+        elif item > max_val:
+            to_drop.append(i)
+            above += 1
+
+    print("MSD filter 2 recommended the removal of", len(to_drop),
+          "items, leaving", len(displacements) - len(to_drop))
+
+    return to_drop, mean
 
 
 def sweep_current_folder() -> None:

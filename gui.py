@@ -71,12 +71,16 @@ if __name__ == '__main__':
         command=start
     ).pack()
 
+    def kill():
+        root.destroy()
+        exit(0)
+
     tk.Button(
         root,
         text='Quit',
-        command=root.destroy
+        command=kill
     ).pack()
 
     root.mainloop()
 
-    exit(0)
+    print("done")
