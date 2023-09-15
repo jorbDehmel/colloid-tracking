@@ -1,24 +1,25 @@
 #!/usr/bin/python3
 
 import pandas as pd
-from numpy import zeros, mean, std
+from numpy import zeros, mean, std, percentile
 import matplotlib.pyplot as plt
 from os import *
 from sys import *
 from time import time
-
-'''
-TODO:
-- Remember to recalculate STD AFTER filter- Don't just use ImageJ's version!
-- Make sure Brownian filters are FIRST, and any IQR/STD filters are AFTER
-'''
 
 # What columns to keep from the .csv files
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'TRACK_MEDIAN_SPEED', 'TOTAL_DISTANCE_TRAVELED',
                     'MEAN_STRAIGHT_LINE_SPEED',
                     'LINEARITY_OF_FORWARD_PROGRESSION']
-# 'TRACK_STD_SPEED'
+
+# Flags for which -2 * STD filters to apply
+do_std_filter_flags: [bool] = [True, False, False, True, True, False]
+# do_std_filter_flags: [bool] = None
+
+# Flags for which -1.5 * IQR filters to apply
+do_iqr_filter_flags: [bool] = [True, False, False, True, True, False]
+# do_iqr_filter_flags: [bool] = None
 
 # Which frequencies to scan
 frequencies: [str] = ['0', '0.8', '1', '10',
@@ -31,7 +32,7 @@ folder: str = ''
 # The suffix to follow X-khz
 suffix: str = 'trackexport.csv'
 
-# Turning this on tends to erase everything
+# Tends to erase everything
 do_speed_thresh: bool = False
 
 # Tends to work well
@@ -42,13 +43,23 @@ do_linearity_thresh: bool = True
 
 
 # Analyze a file with a given name, and return the results
-def do_file(name: str, displacement_threshold: float = 0.0, speed_threshold: float = 0.0, linearity_threshold: float = 0.0) -> ([float], [float]):
+# If speed_threshold is nonzero, any track with less speed will
+# be filtered out. This is similar for the linearity and displacement
+# thresholds. The std_drop_flags and iqr_drop_flags lists are
+# arrays of booleans. If the ith item is True, that column
+# will be filtered such that only items which remain are those
+# which are above 2 STD/IQR below the mean for their column.
+# Returns a duple containing the output data followed by
+# the standard deviations.
+def do_file(name: str, displacement_threshold: float = 0.0,
+            speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
+            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None) -> ([float], [float]):
     try:
         # Load file
         csv = pd.read_csv(name + suffix)
     except:
         print('Failed to open', name + suffix)
-        return [-1 for _ in col_names]
+        return ([None for _ in col_names] + [None, None], [None for _ in col_names])
 
     # Drop useless data (columns)
     names_to_drop: [str] = []
@@ -58,9 +69,13 @@ def do_file(name: str, displacement_threshold: float = 0.0, speed_threshold: flo
 
     csv.drop(axis=1, inplace=True, labels=names_to_drop)
 
+    # Ensure the columns are in the correct order (VITAL)
+    assert csv.columns.to_list() == col_names
+
     # Drop useless data (rows)
     csv.drop(axis=0, inplace=True, labels=[0, 1, 2])
 
+    # Used later
     initial_num_rows: int = len(csv)
 
     # Do thresholding here
@@ -76,18 +91,64 @@ def do_file(name: str, displacement_threshold: float = 0.0, speed_threshold: flo
                 # Must also meet displacement threshold
                 if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
+                    continue
 
             if do_linearity_thresh:
                 # Must pass linearity threshold
                 if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
+                    continue
 
+    # Do STD filtering if needed
+    if std_drop_flags is not None and len(std_drop_flags) == len(csv.columns):
+
+        # Collect STD's for the requested items
+        std_values: [float] = [
+            std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
+
+        # Collect means
+        mean_values: [float] = [
+            mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
+
+        # Iterate over rows, dropping if needed
+        for row in csv.iterrows():
+            raw_list: [float] = row[1].astype(float).to_list()
+
+            for i in range(len(raw_list)):
+                if raw_list[i] < mean_values[i] - (2 * std_values[i]):
+                    csv.drop(axis=0, inplace=True, labels=[row[0]])
+                    break
+
+    # Do IQR filtering if needed
+    if iqr_drop_flags is not None and len(iqr_drop_flags) == len(csv.columns):
+
+        # Calculate IQR values
+        iqr_values: [float] = [0.0 for i in csv.columns]
+        for i, col_name in enumerate(csv.columns):
+            if iqr_drop_flags[i]:
+                q1, q3 = percentile(csv[col_name].astype(float), [25, 75])
+                iqr_values[i] = q3 - q1
+
+        # Collect means
+        mean_values: [float] = [
+            mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for col_name in csv.columns]
+
+        # Iterate over rows, dropping if needed
+        for row in csv.iterrows():
+            raw_list: [float] = row[1].astype(float).to_list()
+
+            for i in range(len(raw_list)):
+                if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
+                    csv.drop(axis=0, inplace=True, labels=[row[0]])
+                    break
+
+    # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
 
     output_data: [float] = [0 for _ in range(len(csv.columns) + 2)]
     output_std: [float] = [0 for _ in range(len(csv.columns))]
 
-    # Calculate means and stds
+    # Calculate means and adjusted STD's
     for i, item in enumerate(csv.columns):
         output_data[i] = mean(csv[item].astype(float).to_list())
         output_std[i] = std(csv[item].astype(float).to_list())
@@ -100,9 +161,13 @@ def do_file(name: str, displacement_threshold: float = 0.0, speed_threshold: flo
     output_data[-1] = final_num_rows
     output_data[-2] = initial_num_rows
 
+    # Output percent remaining
     if initial_num_rows != final_num_rows:
         print('Filtered out', initial_num_rows -
-              final_num_rows, 'tracks, leaving', final_num_rows)
+              final_num_rows, 'tracks, leaving',
+              final_num_rows, '(' +
+              str(round(100 * final_num_rows / initial_num_rows, 3))
+              + '% remain)')
 
     return (output_data, output_std)
 
@@ -126,12 +191,16 @@ def graph_column(table: pd.DataFrame, column_name: str, file_name: str | None = 
         filter_status += 'Displacement-filtered '
     if do_linearity_thresh:
         filter_status += 'Linearity-filtered '
+    if do_std_filter_flags is not None:
+        filter_status += '2_STD_MIN-filtered '
+    if do_iqr_filter_flags is not None:
+        filter_status += '1.5_IQR_MIN-filtered '
 
     if filter_status == '':
         filter_status = 'Unfiltered '
 
     plt.title(filter_status + '\nMean ' + column_name +
-              ' by Applied Frequency')
+              ' by Applied Frequency', fontsize=8)
 
     plt.xlabel('Applied Frequency')
     plt.ylabel(column_name)
@@ -171,12 +240,17 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
         filter_status += 'Displacement-filtered '
     if do_linearity_thresh:
         filter_status += 'Linearity-filtered '
+    if do_std_filter_flags is not None:
+        filter_status += '2_STD_MIN-filtered '
+    if do_iqr_filter_flags is not None:
+        filter_status += '1.5_IQR_MIN-filtered '
 
     if filter_status == '':
         filter_status = 'Unfiltered '
 
     plt.title(filter_status + '\nMean ' + column_name +
-              'by Applied Frequency (Plus or Minus ' + bar_column_name + ')')
+              'by Applied Frequency (Plus or Minus ' + bar_column_name + ')',
+              fontsize=8)
 
     plt.xlabel('Applied Frequency')
     plt.ylabel(column_name)
@@ -211,7 +285,10 @@ if __name__ == '__main__':
 
         array[i], std_array[i] = do_file(folder + sep + name,
                                          brownian_displacement_threshold,
-                                         brownian_speed_threshold)
+                                         brownian_speed_threshold,
+                                         brownian_linearity_threshold,
+                                         do_std_filter_flags,
+                                         do_iqr_filter_flags)
 
         end: float = time()
 
@@ -247,7 +324,7 @@ if __name__ == '__main__':
 
     plt.clf()
 
-    plt.title('Initial Vs. Final Track Counts')
+    plt.title('Initial (Top) Vs. Final (Bottom) Track Counts', fontsize=8)
 
     plt.plot(out_csv['INITIAL_TRACK_COUNT'])
     plt.plot(out_csv['FILTERED_TRACK_COUNT'])
