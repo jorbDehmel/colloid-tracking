@@ -15,23 +15,26 @@ col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'LINEARITY_OF_FORWARD_PROGRESSION']
 
 # Flags for which -2 * STD filters to apply
-do_std_filter_flags: [bool] = [True, False, False, False, True, False, True]
+# do_std_filter_flags: [bool] = [True, False, False, True, False, True, True]
+do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
 
 # Flags for which -1.5 * IQR filters to apply
-do_iqr_filter_flags: [bool] = [True, False, False, False, True, False, True]
+# do_iqr_filter_flags: [bool] = [True, False, False, True, False, True, True]
+do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
+
+do_quality_percentile_filter: bool = False
+quality_percentile_filter: float = 75.0
 
 patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?hz)',
                    '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
-                   '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz']
+                   '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz',
+                   '^300 ?khz']
 
 # The folder to operate on. Will be replaced by the cwd if ''
 folder: str = ''
 
 # Conversion from pixels/frame to um/s
 conversion: float = 4 * 0.32
-
-# The suffix to follow X-khz
-suffix: str = 'trackexport.csv'
 
 # Tends to erase everything
 do_speed_thresh: bool = False
@@ -40,12 +43,10 @@ do_speed_thresh: bool = False
 do_displacement_thresh: bool = True
 
 # Tends to not do much
-do_linearity_thresh: bool = True
+do_linearity_thresh: bool = False
 
-# Tends to not do much
-do_quality_thresh: bool = False
-quality_threshold: float = 4.0
-
+# If not None, also save graphs here (w/ mangled prefix)
+secondary_save_path: str = '/home/jorb/data_graphs/'
 
 # Analyze a file with a given name, and return the results
 # If speed_threshold is nonzero, any track with less speed will
@@ -56,10 +57,11 @@ quality_threshold: float = 4.0
 # which are above 2 STD/IQR below the mean for their column.
 # Returns a duple containing the output data followed by
 # the standard deviations.
+
+
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
-            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
-            quality_threshold: float = 0.0) -> ([float], [float]):
+            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None) -> ([float], [float]):
     try:
         # Load file
         csv = pd.read_csv(name)
@@ -84,6 +86,12 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Used later
     initial_num_rows: int = len(csv)
 
+    # Calculate 50th percentile for quality if needed
+    quality_percentile_threshold: float = 0.0
+    if do_quality_percentile_filter:
+        quality_percentile_threshold = percentile(
+            csv['TRACK_MEAN_QUALITY'], q=[quality_percentile_filter])[0]
+
     # Do thresholding here
     if do_speed_thresh or do_displacement_thresh or do_linearity_thresh:
         for row in csv.iterrows():
@@ -105,9 +113,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
-            if do_quality_thresh:
+            if do_quality_percentile_filter:
                 # Must pass quality threshold
-                if float(row[1]['TRACK_MEAN_QUALITY']) < quality_threshold:
+                if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -235,6 +243,8 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
         filter_status += 'Displacement-filtered '
     if do_linearity_thresh:
         filter_status += 'Linearity-filtered '
+    if do_quality_percentile_filter:
+        filter_status += 'Quality-filtered '
     if do_std_filter_flags is not None:
         filter_status += '2_STD_MIN-filtered '
     if do_iqr_filter_flags is not None:
@@ -243,7 +253,7 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     if filter_status == '':
         filter_status = 'Unfiltered '
 
-    plt.title(filter_status + '\nMean ' + column_name +
+    plt.title(name_fixer.get_cwd() + '\n' + filter_status + '\nMean ' + column_name +
               'by Applied Frequency (Plus or Minus ' + bar_column_name + ')')
 
     plt.xlabel('Applied Frequency')
@@ -251,15 +261,23 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
 
     plt.savefig(file_name)
 
+    if secondary_save_path is not None:
+        plt.savefig(secondary_save_path +
+                    name_fixer.get_cwd() + '_' + file_name)
+
     return True
 
 
 if __name__ == '__main__':
-    if folder == '':
+    if folder == '' or folder is None:
+        if len(argv) != 1:
+            print('Changing folder from arguments...')
+            chdir(argv[1])
+
         print('Getting current folder...')
         folder = getcwd()
 
-    print('Analyzing input data...')
+    print('Analyzing input data at', folder)
 
     # Internal string representation of the frequencies
     names: [str] = name_fixer.fix_names(patterns)
@@ -288,13 +306,13 @@ if __name__ == '__main__':
 
             array[i], std_array[i] = do_file(folder + sep + name,
                                              0.0, 0.0, 0.0,
-                                             None, None,
-                                             quality_threshold)
+                                             None, None)
 
             end: float = time()
 
-            brownian_speed_threshold = array[0][4]
             brownian_displacement_threshold = array[0][0]
+            quality_threshold = array[0][3]
+            brownian_speed_threshold = array[0][4]
             brownian_linearity_threshold = array[0][5]
 
         else:
@@ -305,7 +323,7 @@ if __name__ == '__main__':
                                              brownian_speed_threshold,
                                              brownian_linearity_threshold,
                                              do_std_filter_flags,
-                                             do_iqr_filter_flags, 1.5)
+                                             do_iqr_filter_flags)
 
             end: float = time()
 
@@ -327,6 +345,12 @@ if __name__ == '__main__':
                                          index=trimmed_names)
     std_csv.to_csv('track_data_summary_stds.csv')
 
+    if secondary_save_path is not None:
+        out_csv.to_csv(secondary_save_path +
+                       name_fixer.get_cwd() + 'track_data_summary.csv')
+        std_csv.to_csv(secondary_save_path +
+                       name_fixer.get_cwd() + 'track_data_summary_stds.csv')
+
     print('Generating graphs...')
 
     for column_name in col_names:
@@ -337,12 +361,17 @@ if __name__ == '__main__':
     plt.clf()
     plt.rc('font', size=6)
 
-    plt.title('Initial (Top) Vs. Final (Bottom) Track Counts')
+    plt.title(name_fixer.get_cwd() +
+              '\nInitial (Top) Vs. Final (Bottom) Track Counts')
 
     plt.plot(out_csv['INITIAL_TRACK_COUNT'])
     plt.plot(out_csv['FILTERED_TRACK_COUNT'])
 
     plt.savefig('TRACK_COUNT.png')
+
+    if secondary_save_path is not None:
+        plt.savefig(secondary_save_path +
+                    name_fixer.get_cwd() + '_TRACK_COUNT')
 
     print('Done.')
 

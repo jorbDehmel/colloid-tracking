@@ -29,6 +29,18 @@ def fix_names(patterns: [str]) -> [str | None]:
     return out
 
 
+# Gets the cleaned cwd as a string
+def get_cwd() -> str:
+    out: str = os.getcwd()
+
+    out = out.replace('/', '_')
+    out = out.replace('\\', '_')
+    out = out.replace('.', '_')
+    out = out.replace(' ', '_')
+
+    return out
+
+
 if __name__ == '__main__':
     patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?khz)',
                        '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
