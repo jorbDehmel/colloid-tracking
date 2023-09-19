@@ -14,16 +14,21 @@ col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
                     'LINEARITY_OF_FORWARD_PROGRESSION']
 
+# Columns which didn't originally exist, but will exist in our output .csv
+extra_columns: [str] = ['INITIAL_TRACK_COUNT',
+                        'FILTERED_TRACK_COUNT',
+                        'STRAIGHT_LINE_SPEED_UM_PER_S']
+
 # Flags for which -2 * STD filters to apply
-# do_std_filter_flags: [bool] = [True, False, False, True, False, True, True]
-do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
+do_std_filter_flags: [bool] = [False, False, False, True, False, True, True]
+# do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
 
 # Flags for which -1.5 * IQR filters to apply
-# do_iqr_filter_flags: [bool] = [True, False, False, True, False, True, True]
-do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
+do_iqr_filter_flags: [bool] = [False, False, False, True, False, True, True]
+# do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
 
-do_quality_percentile_filter: bool = False
-quality_percentile_filter: float = 75.0
+do_quality_percentile_filter: bool = True
+quality_percentile_filter: float = 50.0
 
 patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?hz)',
                    '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
@@ -40,13 +45,16 @@ conversion: float = 4 * 0.32
 do_speed_thresh: bool = False
 
 # Tends to work well
-do_displacement_thresh: bool = True
+do_displacement_thresh: bool = False
 
 # Tends to not do much
 do_linearity_thresh: bool = False
 
 # If not None, also save graphs here (w/ mangled prefix)
 secondary_save_path: str = '/home/jorb/data_graphs/'
+
+# If true, will only print warnings and errors
+silent: bool = True
 
 # Analyze a file with a given name, and return the results
 # If speed_threshold is nonzero, any track with less speed will
@@ -86,12 +94,6 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Used later
     initial_num_rows: int = len(csv)
 
-    # Calculate 50th percentile for quality if needed
-    quality_percentile_threshold: float = 0.0
-    if do_quality_percentile_filter:
-        quality_percentile_threshold = percentile(
-            csv['TRACK_MEAN_QUALITY'], q=[quality_percentile_filter])[0]
-
     # Do thresholding here
     if do_speed_thresh or do_displacement_thresh or do_linearity_thresh:
         for row in csv.iterrows():
@@ -115,6 +117,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             if do_quality_percentile_filter:
                 # Must pass quality threshold
+                quality_percentile_threshold: float = percentile(
+                    csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
+
                 if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
@@ -174,8 +179,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
 
-    output_data: [float] = [0.0 for _ in range(len(csv.columns) + 2)]
-    output_std: [float] = [0.0 for _ in range(len(csv.columns))]
+    output_data: [float] = [0.0 for _ in range(
+        len(col_names) + len(extra_columns))]
+    output_std: [float] = [0.0 for _ in range(len(col_names))]
 
     # Calculate means and adjusted STD's
     for i, item in enumerate(csv.columns):
@@ -187,15 +193,18 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('Warning! No tracks remain!')
             output_data[i] = None
 
-    output_data[-1] = final_num_rows
-    output_data[-2] = initial_num_rows
+    output_data[len(col_names)] = initial_num_rows
+    output_data[len(col_names) + 1] = final_num_rows
 
-    if final_num_rows * 4 < initial_num_rows:
-        print('Warning! Fewer than 25% of particles survived filtering.')
+    if output_data[5] is None:
+        output_data[len(col_names) + 2] = None
+    else:
+        output_data[len(col_names) + 2] = output_data[5] * conversion
 
     # Output percent remaining
     if initial_num_rows != final_num_rows:
-        print('Filtered out', initial_num_rows -
+        print((name + ':')[-20:],
+              'Filtered out', initial_num_rows -
               final_num_rows, 'tracks, leaving',
               final_num_rows, '(' +
               str(round(100 * final_num_rows / initial_num_rows, 3))
@@ -245,6 +254,9 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
         filter_status += 'Linearity-filtered '
     if do_quality_percentile_filter:
         filter_status += 'Quality-filtered '
+    if do_quality_percentile_filter:
+        filter_status += str(quality_percentile_filter) + \
+            '-percentile-plus '
     if do_std_filter_flags is not None:
         filter_status += '2_STD_MIN-filtered '
     if do_iqr_filter_flags is not None:
@@ -271,13 +283,18 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
 if __name__ == '__main__':
     if folder == '' or folder is None:
         if len(argv) != 1:
-            print('Changing folder from arguments...')
+            if not silent:
+                print('Changing folder from arguments...')
+
             chdir(argv[1])
 
-        print('Getting current folder...')
+        if not silent:
+            print('Getting current folder...')
+
         folder = getcwd()
 
-    print('Analyzing input data at', folder)
+    if not silent:
+        print('Analyzing input data at', folder)
 
     # Internal string representation of the frequencies
     names: [str] = name_fixer.fix_names(patterns)
@@ -291,7 +308,7 @@ if __name__ == '__main__':
         raise Exception('No files could be found.')
 
     # Output array for data
-    array = zeros(shape=(len(names), len(col_names) + 2))
+    array = zeros(shape=(len(names), len(col_names) + len(extra_columns)))
     std_array = zeros(shape=(len(names), len(col_names)))
 
     # Analyze files
@@ -304,9 +321,14 @@ if __name__ == '__main__':
         if i == 0 and has_control:
             start: float = time()
 
-            array[i], std_array[i] = do_file(folder + sep + name,
-                                             0.0, 0.0, 0.0,
-                                             None, None)
+            try:
+                array[i], std_array[i] = do_file(folder + sep + name,
+                                                 0.0, 0.0, 0.0,
+                                                 None, None)
+            except:
+                print("ERROR DURING COLLECTION OF FILE", folder + sep + name)
+                array[i] = [None for i in len(array[i])]
+                std_array[i] = [None for i in len(std_array[i])]
 
             end: float = time()
 
@@ -327,15 +349,17 @@ if __name__ == '__main__':
 
             end: float = time()
 
-        print(name, 'took', round(end - start, 5), 'seconds.')
+        if not silent:
+            print(name, 'took', round(end - start, 5), 'seconds.')
 
-    print('Generating output .csv file...')
+    if not silent:
+        print('Generating output .csv file...')
 
     trimmed_names: [str] = [item[:8] for item in names]
 
     out_csv: pd.DataFrame = pd.DataFrame(array,
                                          columns=(
-                                             col_names + ['INITIAL_TRACK_COUNT', 'FILTERED_TRACK_COUNT']),
+                                             col_names + extra_columns),
                                          index=trimmed_names)
     out_csv.to_csv('track_data_summary.csv')
 
@@ -351,7 +375,8 @@ if __name__ == '__main__':
         std_csv.to_csv(secondary_save_path +
                        name_fixer.get_cwd() + 'track_data_summary_stds.csv')
 
-    print('Generating graphs...')
+    if not silent:
+        print('Generating graphs...')
 
     for column_name in col_names:
         graph_column_with_bars(
@@ -373,6 +398,7 @@ if __name__ == '__main__':
         plt.savefig(secondary_save_path +
                     name_fixer.get_cwd() + '_TRACK_COUNT')
 
-    print('Done.')
+    if not silent:
+        print('Done.')
 
     exit(0)
