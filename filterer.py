@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 
+'''
+Jordan Dehmel, 2023
+jdehmel@outlook.com
+'''
+
 import pandas as pd
 from numpy import zeros, mean, std, percentile
 import matplotlib.pyplot as plt
@@ -20,15 +25,16 @@ extra_columns: [str] = ['INITIAL_TRACK_COUNT',
                         'STRAIGHT_LINE_SPEED_UM_PER_S']
 
 # Flags for which -2 * STD filters to apply
-do_std_filter_flags: [bool] = [False, False, False, True, False, True, True]
+# do_std_filter_flags: [bool] = [False, False, False, True, False, True, True]
 # do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
+do_std_filter_flags: [bool] = None
 
 # Flags for which -1.5 * IQR filters to apply
-do_iqr_filter_flags: [bool] = [False, False, False, True, False, True, True]
+do_iqr_filter_flags: [bool] = [False, False, False, True, False, True, False]
 # do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
 
 do_quality_percentile_filter: bool = True
-quality_percentile_filter: float = 50.0
+quality_percentile_filter: float = 40.0
 
 patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?hz)',
                    '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
@@ -45,7 +51,7 @@ conversion: float = 4 * 0.32
 do_speed_thresh: bool = False
 
 # Tends to work well
-do_displacement_thresh: bool = False
+do_displacement_thresh: bool = True
 
 # Tends to not do much
 do_linearity_thresh: bool = False
@@ -95,7 +101,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     initial_num_rows: int = len(csv)
 
     # Do thresholding here
-    if do_speed_thresh or do_displacement_thresh or do_linearity_thresh:
+    if do_speed_thresh or do_displacement_thresh or do_linearity_thresh or do_quality_percentile_filter:
         for row in csv.iterrows():
             if do_speed_thresh:
                 # Must meet mean straight line speed threshold
@@ -162,7 +168,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
         # Collect means
         mean_values: [float] = [
-            mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for col_name in csv.columns]
+            mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0 for col_name in csv.columns]
 
         # Iterate over rows, dropping if needed
         for row in csv.iterrows():
@@ -268,7 +274,7 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     plt.title(name_fixer.get_cwd() + '\n' + filter_status + '\nMean ' + column_name +
               'by Applied Frequency (Plus or Minus ' + bar_column_name + ')')
 
-    plt.xlabel('Applied Frequency')
+    plt.xlabel('Applied Frequency (Hertz)')
     plt.ylabel(column_name)
 
     plt.savefig(file_name)
@@ -356,17 +362,18 @@ if __name__ == '__main__':
         print('Generating output .csv file...')
 
     trimmed_names: [str] = [item[:8] for item in names]
+    floated_names: [str] = [str(name_fixer.path_to_hz(item)) for item in names]
 
     out_csv: pd.DataFrame = pd.DataFrame(array,
                                          columns=(
                                              col_names + extra_columns),
-                                         index=trimmed_names)
+                                         index=floated_names)
     out_csv.to_csv('track_data_summary.csv')
 
     std_csv: pd.DataFrame = pd.DataFrame(std_array,
                                          columns=(
                                              [name + '_STD' for name in col_names]),
-                                         index=trimmed_names)
+                                         index=floated_names)
     std_csv.to_csv('track_data_summary_stds.csv')
 
     if secondary_save_path is not None:
