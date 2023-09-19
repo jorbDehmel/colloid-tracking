@@ -126,7 +126,8 @@ def do_voltage_files(patterns: [str], larger_pattern: str = '.*', larger_pattern
                                         average_speeds_df,
                                         'MEAN_STRAIGHT_LINE_SPEED',
                                         'MSLS_STD',
-                                        output_prefix + 'sls_by_voltage.png')
+                                        output_prefix + 'sls_by_voltage.png',
+                                        override_ticks=['5v', '10v', '15v'])
 
         # Build output graphs from B
         # Save output graphs from B

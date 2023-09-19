@@ -221,7 +221,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
 def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_name: str,
                            bar_column_name: str, file_name: (str | None) = None,
-                           has_control: bool = False) -> bool:
+                           has_control: bool = False, override_ticks: [str] = None) -> bool:
 
     if column_name not in table.columns or bar_column_name not in bar_table.columns:
         return False
@@ -247,7 +247,10 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     plt.plot(minus_bar)
     plt.plot(plus_bar)
 
-    plt.plot(table[column_name])
+    if override_ticks is not None:
+        plt.plot(override_ticks, table[column_name])
+    else:
+        plt.plot(table[column_name])
 
     filter_status: str = ''
 

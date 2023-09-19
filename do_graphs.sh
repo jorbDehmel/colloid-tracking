@@ -1,6 +1,5 @@
 #!/bin/fish
 
-rm -rf ~/data_graphs/*
 mkdir -p ~/data_graphs
 
 ~/Programs/physicsScripts/filterer.py /run/media/jorb/Music/data/KCL\ Final/KCL\ 1\ X\ 10-4\ M/5\ Micron/5\ V/Analysis\ 1/
