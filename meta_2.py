@@ -45,6 +45,8 @@ def load_voltage(pattern: str, save_path: str,
     candidates: [str] = name_fixer.find_all(pattern)
     candidates = [c for c in candidates if 'stds' not in c]
 
+    candidates.sort()
+
     # Load files
     files: [df.DataFrame] = [None for _ in candidates]
     std_files: [df.DataFrame] = [None for _ in candidates]
@@ -90,8 +92,18 @@ def load_voltage(pattern: str, save_path: str,
         plt.title(str(voltage) +
                   'v Mean Straight Line Speed Relative to Cross Over')
 
+        ordered_data: [[float]] = []
+        ordered_transitions: [str] = []
+        ordered_labels: [[str]] = []
+        ordered_cleaned_names: [str] = []
+
+        ordered_errors: [[float]] = []
+
         for i, file in enumerate(files):
             data: [float] = file['MEAN_STRAIGHT_LINE_SPEED'].astype(
+                float).to_list()
+
+            std_data: [float] = std_files[i]['MEAN_STRAIGHT_LINE_SPEED_STD'].astype(
                 float).to_list()
 
             names: [str] = [str(n[1][0])
@@ -118,18 +130,21 @@ def load_voltage(pattern: str, save_path: str,
             if cleaned_name == '10 micron ' + 'KCL 5 X 10-5 M':
                 cur_transition = transitions[3]
 
-            reverser.graph_relative(
-                data, cur_transition, names, None, None, None, False, False, cleaned_name)
+            ordered_errors.append(std_data)
+            ordered_data.append(data)
+            ordered_labels.append(names)
+            ordered_transitions.append(cur_transition)
+            ordered_cleaned_names.append(cleaned_name)
 
-            # plt.plot(names, data, label=cleaned_names[i % len(names)])
-
-        plt.legend()
-
-        if save_path is not None:
-            plt.savefig(save_path + '.png')
-
-        if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + save_path + '.png')
+        reverser.graph_multiple_relative(
+            ordered_data,
+            ordered_transitions,
+            ordered_labels,
+            [save_path + '.png', secondary_save_path + save_path + '.png'],
+            ('Applied Frequency (Hz)', 'Mean Straight Line Speed (Pixels / Frame)'),
+            ordered_cleaned_names,
+            '(With Interpolated Crossover Points)',
+            ordered_errors)
 
     return (files, std_files, cleaned_names)
 
@@ -182,6 +197,8 @@ if __name__ == '__main__':
     os.chdir(dir)
     print('Working in directory', os.getcwd())
 
+    print('Creating single graphs for each voltage.')
+
     # Voltage independent transition frequencies
     '''
     Must follow the following order:
@@ -194,18 +211,16 @@ if __name__ == '__main__':
     They must be in hertz.
     '''
 
-    '''
     # Real values:
     voltage_independent_transitions: [str] = [
-        14500,
-        12500,
-        10500,
-        5500
+        '14500.0',
+        '12500.0',
+        '10500.0',
+        '5500.0'
     ]
-    '''
 
     # Filler values:
-    voltage_independent_transitions: [str] = ['10000.0' for _ in range(4)]
+    # voltage_independent_transitions: [str] = ['10000.0' for _ in range(4)]
 
     data_5v: ([df.DataFrame], [df.DataFrame], [str]) = load_voltage('(?<!1)5[_ ]?[Vv].*\\.csv', '5v',
                                                                     '/home/jorb/Programs/physicsScripts/',

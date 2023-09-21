@@ -2,6 +2,7 @@
 
 import filterer
 import name_fixer
+import reverser
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -52,10 +53,13 @@ file_patterns: [str] = ['(?<!1)5[_ ]?V[_ ]?', '10[_ ]?V[_ ]?', '15[_ ]?V[_ ]?']
 file_patterns_human_readable: [str] = ['5v', '10v', '15v']
 
 # Optional because it halts execution
-do_3d_graph: bool = True
+do_3d_graph: bool = False
 
 # Optional because it slows things down
 do_2d_graphs: bool = True
+
+# Simplified 2d version of 3d graph
+do_2d_combined_graph: bool = True
 
 
 def do_voltage_files(patterns: [str], larger_pattern: str = '.*', larger_pattern_2: str = '.*',
@@ -132,8 +136,6 @@ def do_voltage_files(patterns: [str], larger_pattern: str = '.*', larger_pattern
         # Build output graphs from B
         # Save output graphs from B
 
-        pass
-
     # Do 3d graph if wanted (because I think it's cool)
     if do_3d_graph:
         plt.rc('font', size=6)
@@ -170,6 +172,28 @@ def do_voltage_files(patterns: [str], larger_pattern: str = '.*', larger_pattern
 
         plt.show()
 
+    if do_2d_combined_graph:
+        voltages: [float] = [5, 10, 15]
+
+        rows: [[str]] = []
+        data: [[float]] = []
+
+        for i in range(len(files)):
+            rows.append([str(row[1][0]) for row in files[i].iterrows()])
+            data.append([data for data in files[i]
+                         ['MEAN_STRAIGHT_LINE_SPEED'].astype(float)])
+
+        axis_labels: (str) = ('Applied Frequency (Hertz)',
+                              'Mean Straight Line Speed (Pixels / Frame)')
+
+        save_paths: [str] = [filterer.secondary_save_path +
+                             output_prefix + 'combined_voltages.png',
+                             '/home/jorb/Programs/physicsScripts/' +
+                             output_prefix + 'combined_voltages.png']
+
+        reverser.graph_multiple_relative(
+            data, [10000.0 for _ in voltages], rows, save_paths, axis_labels, voltages)
+
     return
 
 
@@ -178,6 +202,8 @@ if __name__ == '__main__':
         print('Fatal error: Could not find secondary save location.')
 
         exit(1)
+
+    plt.rcParams['figure.dpi'] = 250
 
     # KCL A stuff
 

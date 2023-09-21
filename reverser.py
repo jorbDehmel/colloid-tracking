@@ -24,8 +24,16 @@ Proposed process 2:
 
 '''
 
+'''
+Revision 9/21:
 
-def get_relative(data: [float], turning_point_index: int) -> [float]:
+We want to insert a datapoint where velocity = 0 at the
+midpoint of the crossover range, then simply multiply by
+-1 after that. NOT relative anymore.
+'''
+
+
+def get_relative_old(data: [float], turning_point_index: int) -> [float]:
     out: [float] = [item - data[turning_point_index] for item in data]
     out[turning_point_index] = 0.0
 
@@ -35,16 +43,16 @@ def get_relative(data: [float], turning_point_index: int) -> [float]:
     return out
 
 
-def graph_relative(data: [float],
-                   turning_point_label: str,
-                   labels: [str],
-                   title: str = 'title',
-                   save_path: str = 'relative_graph.png',
-                   axis_labels: (str) = ('x', 'y'),
-                   do_erase: bool = True,
-                   do_save: bool = True,
-                   label: str = ''
-                   ) -> [float]:
+def graph_relative_old(data: [float],
+                       turning_point_label: str,
+                       labels: [str],
+                       title: str = 'title',
+                       save_path: str = 'relative_graph.png',
+                       axis_labels: (str) = ('x', 'y'),
+                       do_erase: bool = True,
+                       do_save: bool = True,
+                       label: str = ''
+                       ) -> [float]:
 
     turning_point_index: int = 0
     while turning_point_index < len(labels) and float(labels[turning_point_index + 1]) <= float(turning_point_label):
@@ -64,4 +72,130 @@ def graph_relative(data: [float],
     if do_save:
         plt.savefig(save_path)
 
+    return
+
+
+# Inserts a zero such that turning_point_index points to it,
+# and multiplies everything afterwards by 1.
+def get_relative(data: [float], turning_point_index: int) -> [float]:
+    out: [float] = []
+
+    for i in range(0, turning_point_index):
+        out.append(data[i])
+
+    out.append(0)
+
+    for i in range(turning_point_index, len(data)):
+        out.append(-1.0 * data[i])
+
+    return out
+
+
+def graph_multiple_relative(data: [[float]],
+                            turning_points: [str],
+                            labels: [[str]],
+                            save_paths: [str],
+                            axis_labels: (str),
+                            line_labels: [str],
+                            subtitle: str = None,
+                            errors: [[float]] = None) -> None:
+
+    # Create a complete list of all the labels
+    # This keeps weird labels from being pushed to the end of the graph
+    complete_labels: [str] = []
+
+    for label_list in labels:
+        for label in label_list:
+            if label not in complete_labels:
+                complete_labels.append(label)
+
+    for turning_point in turning_points:
+        if turning_point not in complete_labels:
+            complete_labels.append(turning_point)
+
+    # Sort them so they are in numerical order on the x axis
+    complete_labels.sort(key=lambda x: float(x))
+
+    # We only need to graph one line out of our many lines
+    # for all the complete_labels to appear in the correct
+    # order, so we will just do the zeros line in it.
+    zeros: [float] = [0.0 for _ in complete_labels]
+
+    plt.clf()
+    plt.xticks(rotation=-45)
+    plt.plot(complete_labels, zeros)
+
+    plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
+              ', Relative to Crossover Point.' + ('\n' + subtitle if subtitle is not None else ''))
+
+    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k']
+
+    for i, dataset in enumerate(data):
+        turning_point_index: int = 0
+        while float(labels[i][turning_point_index]) <= float(turning_points[i]):
+            turning_point_index += 1
+
+        relative_data: [float] = get_relative(dataset, turning_point_index)
+
+        relative_labels: [str] = labels[i][:turning_point_index] + \
+            [turning_points[i]] + labels[i][turning_point_index:]
+
+        if errors is not None:
+            relative_errors: [float] = errors[i][:turning_point_index] + \
+                [0.0] + errors[i][turning_point_index:]
+
+            plt.errorbar(relative_labels, relative_data,
+                         relative_errors, color=colors[i % len(colors)],
+                         capsize=5, alpha=0.5)
+
+        plt.plot(relative_labels, relative_data,
+                 label=line_labels[i], color=colors[i % len(colors)])
+
+    plt.xlabel(axis_labels[0])
+    plt.ylabel(axis_labels[1])
+
+    plt.legend()
+
+    for path in save_paths:
+        if path is not None:
+            plt.savefig(path)
+
     pass
+
+
+def graph_relative(data_in: [float],
+                   turning_point_label: str,
+                   labels: [str],
+                   title: str = 'title',
+                   save_path: str = 'relative_graph.png',
+                   axis_labels: (str) = ('x', 'y'),
+                   do_erase: bool = True,
+                   do_save: bool = True,
+                   label: str = ''
+                   ) -> [float]:
+
+    # Find location of turning_point_label
+    i: int = 0
+    while i < len(labels) and float(labels[i + 1]) <= float(turning_point_label):
+        i += 1
+
+    real_data: [float] = get_relative(data_in, i)
+    real_labels: [str] = labels[:i] + [turning_point_label] + labels[i:]
+
+    plt.xticks(rotation=-45)
+
+    if do_erase:
+        plt.clf()
+        plt.title(title + ' relative to ' + labels[i])
+        plt.xlabel(axis_labels[0])
+        plt.ylabel(axis_labels[1])
+
+    plt.plot(real_labels, real_data, label=label)
+
+    zeros: [float] = [0.0 for _ in real_data]
+    plt.plot(zeros)
+
+    if do_save:
+        plt.savefig(save_path)
+
+    return
