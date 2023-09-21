@@ -3,6 +3,11 @@
 '''
 Jordan Dehmel, 2023
 jdehmel@outlook.com
+
+TODO:
+- Put all data from a given voltage on one graph
+- Slice up 3d graphs more (tbd, check email for deets)
+
 '''
 
 import pandas as pd
@@ -12,6 +17,8 @@ from os import *
 from sys import *
 from time import time
 import name_fixer
+
+from reverser import graph_relative
 
 # What columns to keep from the .csv files
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
@@ -404,9 +411,25 @@ if __name__ == '__main__':
 
     plt.savefig('TRACK_COUNT.png')
 
+    graph_relative(
+        out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
+        '10000.0',
+        floated_names,
+        'MEAN_STRAIGHT_LINE_SPEED',
+        'RELATIVE_SLS.png',
+        ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
+
     if secondary_save_path is not None:
         plt.savefig(secondary_save_path +
                     name_fixer.get_cwd() + '_TRACK_COUNT')
+
+        graph_relative(
+            out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
+            '10000.0',
+            floated_names,
+            'MEAN_STRAIGHT_LINE_SPEED',
+            secondary_save_path + name_fixer.get_cwd() + '_RELATIVE_SLS.png',
+            ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if not silent:
         print('Done.')
