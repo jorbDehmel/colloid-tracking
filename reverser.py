@@ -128,11 +128,12 @@ def graph_multiple_relative(data: [[float]],
     plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
               ', Relative to Crossover Point.' + ('\n' + subtitle if subtitle is not None else ''))
 
-    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k']
+    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
+                     'tab:orange', 'tab:brown', 'tab:gray', 'pink', 'indigo']
 
     for i, dataset in enumerate(data):
         turning_point_index: int = 0
-        while float(labels[i][turning_point_index]) <= float(turning_points[i]):
+        while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
             turning_point_index += 1
 
         relative_data: [float] = get_relative(dataset, turning_point_index)
@@ -143,10 +144,12 @@ def graph_multiple_relative(data: [[float]],
         if errors is not None:
             relative_errors: [float] = errors[i][:turning_point_index] + \
                 [0.0] + errors[i][turning_point_index:]
+        else:
+            relative_errors: [float] = errors[i][:]
 
-            plt.errorbar(relative_labels, relative_data,
-                         relative_errors, color=colors[i % len(colors)],
-                         capsize=5, alpha=0.5)
+        plt.errorbar(relative_labels, relative_data,
+                     relative_errors, color=colors[i % len(colors)],
+                     capsize=5, alpha=0.5)
 
         plt.plot(relative_labels, relative_data,
                  label=line_labels[i], color=colors[i % len(colors)])
@@ -160,7 +163,86 @@ def graph_multiple_relative(data: [[float]],
         if path is not None:
             plt.savefig(path)
 
-    pass
+    return
+
+
+def graph_multiple_relative_individually(data: [[float]],
+                                         turning_points: [str],
+                                         labels: [[str]],
+                                         save_paths: [str],
+                                         axis_labels: (str),
+                                         line_labels: [str],
+                                         subtitle: str = None,
+                                         errors: [[float]] = None) -> None:
+
+    # Create a complete list of all the labels
+    # This keeps weird labels from being pushed to the end of the graph
+    complete_labels: [str] = []
+
+    for label_list in labels:
+        for label in label_list:
+            if label not in complete_labels:
+                complete_labels.append(label)
+
+    if turning_points is not None:
+        for turning_point in turning_points:
+            if turning_point not in complete_labels:
+                complete_labels.append(turning_point)
+
+    # Sort them so they are in numerical order on the x axis
+    complete_labels.sort(key=lambda x: float(x))
+
+    # We only need to graph one line out of our many lines
+    # for all the complete_labels to appear in the correct
+    # order, so we will just do the zeros line in it.
+    zeros: [float] = [0.0 for _ in complete_labels]
+
+    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
+                     'tab:orange', 'tab:brown', 'tab:gray', 'pink', 'indigo']
+
+    for i, dataset in enumerate(data):
+        plt.clf()
+        plt.xticks(rotation=-45)
+        plt.plot(complete_labels, zeros)
+
+        plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
+                  ', Relative to Crossover Point.' + ('\n' + subtitle if subtitle is not None else ''))
+
+        if turning_points is not None:
+            turning_point_index: int = 0
+            while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
+                turning_point_index += 1
+
+            relative_data: [float] = get_relative(dataset, turning_point_index)
+
+            relative_labels: [str] = labels[i][:turning_point_index] + \
+                [turning_points[i]] + labels[i][turning_point_index:]
+
+            relative_errors: [float] = errors[i][:turning_point_index] + \
+                [0.0] + errors[i][turning_point_index:]
+
+        else:
+            relative_data: [float] = dataset[:]
+            relative_labels: [str] = labels[i][:]
+            relative_errors: [float] = errors[i][:]
+
+        plt.errorbar(relative_labels, relative_data,
+                     relative_errors, color=colors[i % len(colors)],
+                     capsize=5, alpha=0.5)
+
+        plt.plot(relative_labels, relative_data,
+                 label=line_labels[i], color=colors[i % len(colors)])
+
+        plt.xlabel(axis_labels[0])
+        plt.ylabel(axis_labels[1])
+
+        plt.legend()
+
+        for path in save_paths:
+            if path is not None:
+                plt.savefig(path[:-4] + str(i))
+
+    return
 
 
 def graph_relative(data_in: [float],
