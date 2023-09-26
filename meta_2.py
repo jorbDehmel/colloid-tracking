@@ -10,6 +10,8 @@ import reverser
 '''
 An analysis wherein all data from a given voltage is
 on the same graph.
+
+See meta.py for more details.
 '''
 
 '''

@@ -5,6 +5,8 @@ import os
 
 
 '''
+Utilities for sweeping for filenames
+
 Takes an array of str patterns to search for,
 returns a list of files matching that pattern.
 If a pattern could not be found, the corresponding
@@ -79,7 +81,25 @@ def find_all(pattern: str) -> [str]:
     return out
 
 
+# Find all filenames matching a given pattern
+# AND search subfolders
+def find_all_recursive(pattern: str) -> [str]:
+    # Initialize output array
+    out: [str | None] = []
+
+    # Iterate
+    for root, _, filenames in os.walk(os.getcwd()):
+        for filename in filenames:
+            name = root + os.sep + filename
+            if re.search(pattern, name):
+                out.append(name)
+
+    # Return results
+    return out
+
 # Gets the cleaned cwd as a string
+
+
 def get_cwd() -> str:
     out: str = os.getcwd()
 

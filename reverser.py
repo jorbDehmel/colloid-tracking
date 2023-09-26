@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 
 '''
+Utilities for plotting relative straight line speed graphs
+
 Jordan Dehmel, 2023
 jdehmel@outlook.com
 
@@ -109,9 +111,10 @@ def graph_multiple_relative(data: [[float]],
             if label not in complete_labels:
                 complete_labels.append(label)
 
-    for turning_point in turning_points:
-        if turning_point not in complete_labels:
-            complete_labels.append(turning_point)
+    if turning_points is not None:
+        for turning_point in turning_points:
+            if turning_point not in complete_labels:
+                complete_labels.append(turning_point)
 
     # Sort them so they are in numerical order on the x axis
     complete_labels.sort(key=lambda x: float(x))
@@ -132,20 +135,23 @@ def graph_multiple_relative(data: [[float]],
                      'tab:orange', 'tab:brown', 'tab:gray', 'pink', 'indigo']
 
     for i, dataset in enumerate(data):
-        turning_point_index: int = 0
-        while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
-            turning_point_index += 1
+        if turning_points is not None:
+            turning_point_index: int = 0
+            while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
+                turning_point_index += 1
 
-        relative_data: [float] = get_relative(dataset, turning_point_index)
+            relative_data: [float] = get_relative(dataset, turning_point_index)
 
-        relative_labels: [str] = labels[i][:turning_point_index] + \
-            [turning_points[i]] + labels[i][turning_point_index:]
+            relative_labels: [str] = labels[i][:turning_point_index] + \
+                [turning_points[i]] + labels[i][turning_point_index:]
 
-        if errors is not None:
             relative_errors: [float] = errors[i][:turning_point_index] + \
                 [0.0] + errors[i][turning_point_index:]
         else:
-            relative_errors: [float] = errors[i][:]
+            relative_data: [float] = dataset[:]
+            relative_labels: [str] = labels[i][:]
+            relative_errors: [float] = [
+                err if err is not None else 0.0 for err in errors[i]]
 
         plt.errorbar(relative_labels, relative_data,
                      relative_errors, color=colors[i % len(colors)],
@@ -203,6 +209,8 @@ def graph_multiple_relative_individually(data: [[float]],
     for i, dataset in enumerate(data):
         plt.clf()
         plt.xticks(rotation=-45)
+        plt.rcParams['figure.dpi'] = 500
+        plt.rc('font', size=6)
         plt.plot(complete_labels, zeros)
 
         plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
@@ -220,11 +228,14 @@ def graph_multiple_relative_individually(data: [[float]],
 
             relative_errors: [float] = errors[i][:turning_point_index] + \
                 [0.0] + errors[i][turning_point_index:]
+            relative_errors = [
+                err if err is not None else 0.0 for err in relative_errors]
 
         else:
             relative_data: [float] = dataset[:]
             relative_labels: [str] = labels[i][:]
-            relative_errors: [float] = errors[i][:]
+            relative_errors: [float] = [
+                err if err is not None else 0.0 for err in errors[i]]
 
         plt.errorbar(relative_labels, relative_data,
                      relative_errors, color=colors[i % len(colors)],
@@ -268,6 +279,8 @@ def graph_relative(data_in: [float],
 
     if do_erase:
         plt.clf()
+        plt.rcParams['figure.dpi'] = 500
+        plt.rc('font', size=6)
         plt.title(title + ' relative to ' + labels[i])
         plt.xlabel(axis_labels[0])
         plt.ylabel(axis_labels[1])

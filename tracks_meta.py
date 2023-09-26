@@ -1,114 +1,152 @@
 #!/usr/bin/python3
 
+'''
+Outline:
+
+- Process:
+    - For a given folder, there are 5, 10, 15, 20 volt folders
+    - For each of these, there are frequency files
+    - Filterer returns stats on all csv things, but we only need
+      mean straight line speed
+
+    - For each voltage:
+        - For each frequency
+            - Load file and send through filterer
+            - Record relevant data from filterer
+        - Combine into unified voltage graph and csv
+    - Combine into unified folder graph and csv
+
+- Do process on Ramp wave
+- Do process on Sine wave
+- Do process on Square wave
+
+'''
+
 import os
-import sys
-import pandas as df
-from matplotlib import pyplot as plt
 
+import filterer
 import reverser
+import name_fixer
 
-# Meta analysis for 'tracks' data (sine, ramp, etc)
+voltage_patterns: [str] = [
+    '(?<!1)5[_ ]?[Vv][_ ]?',
+    '10[_ ]?[Vv][_ ]?',
+    '15[_ ]?[Vv][_ ]?',
+    '20[_ ]?[Vv][_ ]?']
 
-tracks_path: str = '/home/jorb/data/tracks'
-voltages: [float] = [5.0, 10.0, 15.0, 20.0]
-secondary_save_path: str = '/home/jorb/data/tracks/processed/'
+voltage_labels: [str] = [
+    '5v',
+    '10v',
+    '15v',
+    '20v']
+
+frequency_patterns: [str] = [
+    '((?<![015.])0 ?khz|control)', '(0.8 ?khz|800 ?hz)',
+    '1 ?khz', '10 ?khz', '25 ?khz', '50 ?khz',
+    '75 ?khz', '100 ?khz', '150 ?khz', '200 ?khz',
+    '300 ?khz']
 
 
-def load_from_walk(where: str, look_for: str = '.csv', std_id: str = '_stds') -> [(str, df.DataFrame, df.DataFrame)]:
-    std_file_paths: [str] = []
-    file_paths: [str] = []
+def analyze_folder(folder: str, voltage_patterns: [str] = voltage_patterns,
+                   frequency_patterns: [str] = frequency_patterns,
+                   save_prefix: str = '',
+                   voltage_labels: [str] = voltage_labels) -> None:
+    os.chdir(folder)
+    print(os.getcwd())
 
-    # Collect all data paths from tracks_path via walk
-    for (path, _, filenames) in os.walk(where, followlinks=True):
-        for name in filenames:
-            if look_for in name:
-                if std_id in name:
-                    if path + name not in std_file_paths:
-                        std_file_paths.append(path + '/' + name)
-                elif path + name not in file_paths:
-                    file_paths.append(path + '/' + name)
+    data_by_frequency_by_voltage: [[float]] = []
+    std_by_frequency_by_voltage: [[float]] = []
+    labels_by_frequency_by_voltage: [[str]] = []
 
-    # Sort file paths into a predictable order
-    file_paths.sort()
-    std_file_paths.sort()
+    for voltage in voltage_patterns:
+        # frequencies = frequencies present in voltage
+        voltage_files: [str] = name_fixer.find_all_recursive(voltage)
+        frequencies: [str] = name_fixer.fix_names(
+            frequency_patterns, voltage_files)
 
-    # Open files and zip
-    files: [(str, df.DataFrame, df.DataFrame)] = []
-    for path in file_paths:
-        try:
-            file: df.DataFrame = df.read_csv(path)
-        except:
-            continue
+        frequencies = [freq for freq in frequencies if freq is not None]
 
-        try:
-            std_file: df.DataFrame = df.read_csv(path[:-4] + "_stds.csv")
-        except:
-            std_file = None
+        data_by_frequency: [float] = []
+        std_by_frequency: [float] = []
+        labels_by_frequency: [str] = []
 
-        files.append((path, file, std_file))
+        for i, filepath in enumerate(frequencies):
+            # Load file through filterer
+            results, results_std, freq_string = filterer.do_file(filepath,
+                                                                 filterer.brownian_speed_threshold,
+                                                                 filterer.brownian_linearity_threshold,
+                                                                 filterer.brownian_speed_threshold,
+                                                                 filterer.do_std_filter_flags,
+                                                                 filterer.do_iqr_filter_flags,
+                                                                 True)
 
-    # Return
-    return files
+            if i == 0:
+                filterer.brownian_displacement_threshold = results[0]
+                filterer.quality_threshold = results[3]
+                filterer.brownian_speed_threshold = results[5]
+                filterer.brownian_linearity_threshold = results[6]
+
+            # Record relevant data (sls + std)
+            data_by_frequency.append(
+                results[filterer.col_names.index('MEAN_STRAIGHT_LINE_SPEED')])
+            std_by_frequency.append(
+                results_std[filterer.col_names.index('MEAN_STRAIGHT_LINE_SPEED')])
+
+            labels_by_frequency.append(float(freq_string))
+
+        # Combine into unified voltage graph and csv
+
+        # Append to unified data
+        data_by_frequency_by_voltage.append(data_by_frequency[:])
+        std_by_frequency_by_voltage.append(std_by_frequency[:])
+        labels_by_frequency_by_voltage.append(labels_by_frequency[:])
+
+    # Combine into unified folder graph and csv
+
+    reverser.graph_multiple_relative_individually(data_by_frequency_by_voltage,
+                                                  [12500.0 for _ in frequency_patterns],
+                                                  labels_by_frequency_by_voltage,
+                                                  [filterer.secondary_save_path +
+                                                      os.sep + save_prefix + '.png',
+                                                      '/home/jorb/Programs/physicsScripts/' + save_prefix + '.png'],
+                                                  ('Applied Frequency (Hz)',
+                                                      'Mean Straight Line Speed (Pixels / Frame)'),
+                                                  voltage_labels,
+                                                  '(Plus or Minus 1 STD w/ Interpolated Crossover Point, ' +
+                                                  save_prefix + ')',
+                                                  std_by_frequency_by_voltage)
+
+    reverser.graph_multiple_relative(data_by_frequency_by_voltage,
+                                     [12500.0 for _ in frequency_patterns],
+                                     labels_by_frequency_by_voltage,
+                                     [filterer.secondary_save_path +
+                                      os.sep + save_prefix + '.png',
+                                      '/home/jorb/Programs/physicsScripts/' + save_prefix + '.png'],
+                                     ('Applied Frequency (Hz)',
+                                      'Mean Straight Line Speed (Pixels / Frame)'),
+                                     voltage_labels,
+                                     '(Plus or Minus 1 STD w/ Interpolated Crossover Point, ' +
+                                     save_prefix + ')',
+                                     std_by_frequency_by_voltage)
+
+    return
 
 
 if __name__ == '__main__':
-    files: [(str, df.DataFrame, df.DataFrame)] = load_from_walk(
-        tracks_path, 'track_data_summary.csv')
+    filterer.do_displacement_thresh = False
+    filterer.do_linearity_thresh = False
+    filterer.do_std_filter_flags = None
+    filterer.do_speed_thresh = False
 
-    print('Loaded', len(files), 'files.')
+    filterer.do_quality_percentile_filter = True
 
-    # Turn to format which reverser.py takes
-    ordered_data: [[float]] = []
-    ordered_turning_points: [str] = []
-    ordered_labels: [[str]] = []
-    ordered_line_labels: [str] = []
-    ordered_errors: [[float]] = []
+    # Ramp wave
+    analyze_folder('/home/jorb/data/tracks/Ramp Wave', save_prefix='ramp')
 
-    for item in files:
-        ordered_line_labels.append(item[0])
+    # Sine wave
+    analyze_folder('/home/jorb/data/tracks/Sine Wave', save_prefix='sine')
 
-        data: [float] = [row[1]['MEAN_STRAIGHT_LINE_SPEED']
-                         for row in item[1].iterrows()]
-        std_data: [float] = [row[1]['MEAN_STRAIGHT_LINE_SPEED_STD']
-                             for row in item[2].iterrows()]
+    # Square wave
+    analyze_folder('/home/jorb/data/tracks/Square Wave', save_prefix='square')
 
-        ordered_data.append(data)
-        ordered_errors.append(std_data)
-
-        ordered_labels.append([row[1][0] for row in item[1].iterrows()])
-
-    save_paths: [str] = [secondary_save_path + 'RELATIVE_SLS',
-                         '/home/jorb/Programs/physicsScripts/data.png']
-    axis_labels = ('Applied Frequency (Hz)',
-                   'Relative Mean Straight Line Speed (Pixels / Frame)')
-    subtitle: str = '(With Interpolated Crossover Point, Plus or Minus 1 STD)'
-
-    ordered_turning_points = [10000.0 for _ in ordered_data]
-
-    plt.rc('font', size=6)
-    plt.figure(dpi=200)
-    plt.clf()
-
-    reverser.graph_multiple_relative(
-        ordered_data,
-        ordered_turning_points,
-        ordered_labels,
-        save_paths,
-        axis_labels,
-        ordered_line_labels,
-        subtitle,
-        ordered_errors
-    )
-
-    reverser.graph_multiple_relative_individually(
-        ordered_data,
-        None,
-        ordered_labels,
-        save_paths,
-        axis_labels,
-        ordered_line_labels,
-        subtitle,
-        ordered_errors
-    )
-
-    exit(0)
+    pass

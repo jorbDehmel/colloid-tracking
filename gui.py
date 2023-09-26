@@ -9,7 +9,7 @@ import main
 
 '''
 Provides an elementary GUI to interface with
-main.py and. This should be compatible with
+main.py. This should be compatible with
 Windows and POSIX systems.
 
 Jordan Dehmel, 2023

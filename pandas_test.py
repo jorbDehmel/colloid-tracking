@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 
+'''
+This file is not applicable, disregard. It was just for
+comparing tracks vs. spots for imagej.
+'''
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

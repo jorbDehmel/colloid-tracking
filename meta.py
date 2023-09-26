@@ -11,6 +11,8 @@ import pandas as pd
 import os
 
 '''
+Utilities for analyzing data by voltage (meta-analysis of our frequency data)
+
 Jordan Dehmel, 2023
 jdehmel@outlook.com
 

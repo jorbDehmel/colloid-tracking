@@ -7,6 +7,10 @@ import os
 
 import matplotlib.pyplot as plt
 
+'''
+Original filter
+'''
+
 # Folder location
 folder: str = ''
 

@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
 '''
+Main particle filtering utilities
+
 Jordan Dehmel, 2023
 jdehmel@outlook.com
 
@@ -17,6 +19,7 @@ from os import *
 from sys import *
 from time import time
 import name_fixer
+import re
 
 from reverser import graph_relative
 
@@ -69,6 +72,11 @@ secondary_save_path: str = '/home/jorb/data_graphs/'
 # If true, will only print warnings and errors
 silent: bool = True
 
+brownian_speed_threshold: float = 0.0
+brownian_displacement_threshold: float = 0.0
+brownian_linearity_threshold: float = 0.0
+
+
 # Analyze a file with a given name, and return the results
 # If speed_threshold is nonzero, any track with less speed will
 # be filtered out. This is similar for the linearity and displacement
@@ -78,11 +86,10 @@ silent: bool = True
 # which are above 2 STD/IQR below the mean for their column.
 # Returns a duple containing the output data followed by
 # the standard deviations.
-
-
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
-            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None) -> ([float], [float]):
+            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
+            return_label: bool = False) -> ([float], [float]):
     try:
         # Load file
         csv = pd.read_csv(name)
@@ -223,7 +230,32 @@ def do_file(name: str, displacement_threshold: float = 0.0,
               str(round(100 * final_num_rows / initial_num_rows, 3))
               + '% remain)')
 
-    return (output_data, output_std)
+    if return_label is not None:
+        label: str = ''
+
+        if '800hz' in name or '0.8khz' in name:
+            label = '800.0'
+        elif '1khz' in name:
+            label = '1000.0'
+        elif '25khz' in name:
+            label = '25000.0'
+        elif '5khz' in name:
+            label = '5000.0'
+        elif '10khz' in name:
+            label = '10000.0'
+        elif '50khz' in name:
+            label = '50000.0'
+        elif '100khz' in name:
+            label = '100000.0'
+        elif '200khz' in name:
+            label = '200000.0'
+
+        elif '0khz' in name or 'control' in name:
+            label = '0.0'
+
+        return (output_data, output_std, label)
+    else:
+        return (output_data, output_std)
 
 
 def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_name: str,
@@ -328,11 +360,6 @@ if __name__ == '__main__':
     std_array = zeros(shape=(len(names), len(col_names)))
 
     # Analyze files
-
-    brownian_speed_threshold: float = 0.0
-    brownian_displacement_threshold: float = 0.0
-    brownian_linearity_threshold: float = 0.0
-
     for i, name in enumerate(names):
         if i == 0 and has_control:
             start: float = time()
@@ -350,8 +377,8 @@ if __name__ == '__main__':
 
             brownian_displacement_threshold = array[0][0]
             quality_threshold = array[0][3]
-            brownian_speed_threshold = array[0][4]
-            brownian_linearity_threshold = array[0][5]
+            brownian_speed_threshold = array[0][5]
+            brownian_linearity_threshold = array[0][6]
 
         else:
             start: float = time()
