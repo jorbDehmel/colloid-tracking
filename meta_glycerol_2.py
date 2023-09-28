@@ -15,32 +15,6 @@ Utilities for analyzing data by voltage (meta-analysis of our frequency data)
 
 Jordan Dehmel, 2023
 jdehmel@outlook.com
-
-Analyzes by voltage using collected data
-
-Gets secondary save path from filterer.py
-
-Preconditions:
-- ./do_graphs.sh has been run
-- filterer.secondary_save_path is not None, and is not a unit string
-- Data .csv's have been saved at the designated secondary save path
-
-Postconditions:
-- A voltage-wise analysis .csv has been saved in the secondary save path
-- Any relevant graphs have also been saved there
-
-We want to save the following for both 5 microns and 10 microns (separately).
-1) Average straight-line speed across all frequencies by voltage as csv
-2) Graph for above
-3) Straight-line speed for a given frequency by voltage as csv
-4) Graphs for above
-
-We also want to do the following.
-5) After everything, display a 3d plt graph of straight-line speed
-   by frequency and voltage
-
-This file does NO FILTERING. It only works with data which has already
-been filtered and saved by filterer.py.
 '''
 
 # File patterns to look for
