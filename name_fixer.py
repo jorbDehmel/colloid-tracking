@@ -56,6 +56,9 @@ def path_to_hz(path: str) -> float:
     numbers: str = '0123456789.'
     i: int = 0
 
+    while path_temp[0] not in numbers:
+        path_temp = path_temp[1:]
+
     while path_temp[i] in numbers:
         i += 1
 

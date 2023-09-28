@@ -40,16 +40,35 @@ extra_columns: [str] = ['INITIAL_TRACK_COUNT',
 do_std_filter_flags: [bool] = None
 
 # Flags for which -1.5 * IQR filters to apply
-do_iqr_filter_flags: [bool] = [False, False, False, True, False, True, False]
+do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
 # do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
 
 do_quality_percentile_filter: bool = True
-quality_percentile_filter: float = 40.0
+quality_percentile_filter: float = 25.0
 
-patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?hz)',
-                   '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
-                   '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz',
-                   '^300 ?khz']
+patterns: [str] = ['((0 ?khz|control).*track|t(0 ?khz|control))',
+                   '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
+                   '(1 ?khz.*track|t1 ?khz)',
+                   '(10 ?khz.*track|t10 ?khz)',
+                   '(25 ?khz.*track|t25 ?khz)',
+                   '(50 ?khz.*track|t50 ?khz)',
+                   '(75 ?khz.*track|t75 ?khz)',
+                   '(100 ?khz.*track|t100 ?khz)',
+                   '(150 ?khz.*track|t150 ?khz)',
+                   '(200 ?khz.*track|t200 ?khz)',
+                   '(300 ?khz.*track|t300 ?khz)']
+
+fallback_patterns: [str] = ['(0 ?khz|control)',
+                            '(0.8 ?khz|800 ?hz)',
+                            '1 ?khz',
+                            '10 ?khz',
+                            '25 ?khz',
+                            '50 ?khz',
+                            '75 ?khz',
+                            '100 ?khz',
+                            '150 ?khz',
+                            '200 ?khz',
+                            '300 ?khz']
 
 # The folder to operate on. Will be replaced by the cwd if ''
 folder: str = ''
@@ -61,7 +80,7 @@ conversion: float = 4 * 0.32
 do_speed_thresh: bool = False
 
 # Tends to work well
-do_displacement_thresh: bool = True
+do_displacement_thresh: bool = False
 
 # Tends to not do much
 do_linearity_thresh: bool = False
@@ -145,6 +164,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     continue
 
     if csv.shape[0] == 0:
+        print('In file', name)
         print('Error! No items exceeded brownian thresholding.')
 
     # Do STD filtering if needed
@@ -168,6 +188,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     break
 
     if csv.shape[0] == 0:
+        print('In file', name)
         print('Error! No items survived brownian thresholding and standard deviation filtering.')
 
     # Do IQR filtering if needed
@@ -194,7 +215,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     break
 
     if csv.shape[0] == 0:
+        print('In file', name)
         print('Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
+        raise Exception('Overfiltering Error')
 
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
@@ -230,7 +253,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
               str(round(100 * final_num_rows / initial_num_rows, 3))
               + '% remain)')
 
-    if return_label is not None:
+    if return_label:
         label: str = ''
 
         if '800hz' in name or '0.8khz' in name:
@@ -351,8 +374,19 @@ if __name__ == '__main__':
     # Drop any files which do not exist
     names = [name for name in names if name is not None]
 
+    # Use fallback patterns if needed
+    if len(names) == 0:
+        print('Using fallback patterns; This could lead to picking up spots files instead of tracks.')
+
+        names: [str] = name_fixer.fix_names(fallback_patterns)
+        has_control: bool = (names[0] is not None)
+
+        # Drop any files which do not exist
+        names = [name for name in names if name is not None]
+
     # Exit if no names remain
     if len(names) == 0:
+        print(folder)
         raise Exception('No files could be found.')
 
     # Output array for data
