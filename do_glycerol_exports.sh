@@ -90,7 +90,7 @@ wait
 echo "Done with layer 1 analysis."
 echo "Doing meta analysis..."
 
-~/Programs/physicsScripts/meta.py
+~/Programs/physicsScripts/meta_glycerol.py
 
 echo "Done."
 

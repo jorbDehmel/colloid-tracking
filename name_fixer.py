@@ -84,6 +84,22 @@ def find_all(pattern: str) -> [str]:
     return out
 
 
+# Find all filenames which match a given set of patterns
+def find_all_from_filters(filters: [str], final_file_qualifier: str) -> [str]:
+    name_array: [str] = find_all(filters[0])
+
+    for filter in filters[1:]:
+        temp: [str] = find_all(filter)
+
+        name_array = [name for name in name_array if name in temp]
+
+        if len(name_array) == 0:
+            break
+
+    name_array = [name for name in name_array if re.search(final_file_qualifier, name) is not None]
+
+    return name_array
+
 # Find all filenames matching a given pattern
 # AND search subfolders
 def find_all_recursive(pattern: str) -> [str]:

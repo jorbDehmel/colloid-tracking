@@ -1,6 +1,7 @@
 __pycache__/
 .vscode/
 test*/
+perm/
 tk
 *.png
 *.csv

@@ -125,7 +125,11 @@ def graph_multiple_relative(data: [[float]],
     zeros: [float] = [0.0 for _ in complete_labels]
 
     plt.clf()
+
     plt.xticks(rotation=-45)
+    plt.rc('font', size=8)
+
+    fig = plt.figure(figsize=(10, 10), dpi=200)
     plt.plot(complete_labels, zeros)
 
     plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
@@ -145,20 +149,31 @@ def graph_multiple_relative(data: [[float]],
             relative_labels: [str] = labels[i][:turning_point_index] + \
                 [turning_points[i]] + labels[i][turning_point_index:]
 
-            relative_errors: [float] = errors[i][:turning_point_index] + \
-                [0.0] + errors[i][turning_point_index:]
+            if errors is not None:
+                relative_errors: [float] = errors[i][:turning_point_index] + \
+                    [0.0] + errors[i][turning_point_index:]
+            else:
+                relative_errors: [float] = None
+
         else:
             relative_data: [float] = dataset[:]
             relative_labels: [str] = labels[i][:]
-            relative_errors: [float] = [
-                err if err is not None else 0.0 for err in errors[i]]
 
-        plt.errorbar(relative_labels, relative_data,
+            if errors is not None:
+                relative_errors: [float] = [
+                    err if err is not None else 0.0 for err in errors[i]]
+            else:
+                relative_errors: [float] = None
+
+        if relative_errors is not None:
+            plt.errorbar(relative_labels, relative_data,
                      relative_errors, color=colors[i % len(colors)],
                      capsize=5, alpha=0.5)
 
-        plt.plot(relative_labels, relative_data,
-                 label=line_labels[i], color=colors[i % len(colors)])
+        plt.plot(relative_labels,
+                 relative_data,
+                 label=line_labels[i % len(line_labels)],
+                 color=colors[i % len(colors)])
 
     plt.xlabel(axis_labels[0])
     plt.ylabel(axis_labels[1])
@@ -275,20 +290,21 @@ def graph_relative(data_in: [float],
     real_data: [float] = get_relative(data_in, i)
     real_labels: [str] = labels[:i] + [turning_point_label] + labels[i:]
 
-    plt.xticks(rotation=-45)
-
     if do_erase:
         plt.clf()
+        plt.xticks(rotation=-45)
         plt.rcParams['figure.dpi'] = 500
         plt.rc('font', size=6)
         plt.title(title + ' relative to ' + labels[i])
         plt.xlabel(axis_labels[0])
         plt.ylabel(axis_labels[1])
 
-    plt.plot(real_labels, real_data, label=label)
+    real_labels.sort(key=lambda x: float(x))
 
     zeros: [float] = [0.0 for _ in real_data]
-    plt.plot(zeros)
+    plt.plot(real_labels, zeros)
+
+    plt.plot(real_labels, real_data, label=label)
 
     if do_save:
         plt.savefig(save_path)
