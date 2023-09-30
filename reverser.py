@@ -1,4 +1,6 @@
 from matplotlib import pyplot as plt
+import numpy as np
+import pandas as pd
 
 '''
 Utilities for plotting relative straight line speed graphs
@@ -93,6 +95,87 @@ def get_relative(data: [float], turning_point_index: int) -> [float]:
     return out
 
 
+# Like graph_multiple_relative,  but saves to .csv instead of .png
+def save_multiple_relative(data: [[float]],
+                            turning_points: [str],
+                            labels: [[str]],
+                            save_paths: [str],
+                            line_labels: [str],
+                            errors: [[float]] = None) -> None:
+    
+    # Create a complete list of all the labels
+    # This keeps weird labels from being pushed to the end of the graph
+    complete_labels: [str] = []
+
+    for label_list in labels:
+        for label in label_list:
+            if label not in complete_labels:
+                complete_labels.append(label)
+
+    for turning_point in turning_points:
+        if turning_point not in complete_labels:
+            complete_labels.append(turning_point)
+
+    # Sort them so they are in numerical order on the x axis
+    complete_labels.sort(key=lambda x: float(x))
+
+    '''
+    DataFrame width should be twice the length of complete_labels + len(extra_columns)
+    DataFrame height should be the number of entries in data
+
+    Columns will be [complete labels] + [complete labels _STD] + extra_columns
+    Rows will be line_labels
+    '''
+
+    extra_columns: [str] = ['INVERSION_FREQ_HZ']
+
+    array: [[float]] = [[] for _ in data]
+
+    for i, dataset in enumerate(data):
+        turning_point_index: int = 0
+        while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
+            turning_point_index += 1
+
+        relative_data: [float] = get_relative(dataset, turning_point_index)
+
+        relative_labels: [str] = labels[i][:turning_point_index] + \
+            [turning_points[i]] + labels[i][turning_point_index:]
+
+        relative_errors: [float] = errors[i][:turning_point_index] + \
+            [0.0] + errors[i][turning_point_index:]
+        
+        complete_data: [float] = []
+        complete_errors: [float] = []
+        for item in complete_labels:
+            if item in relative_labels:
+                j = relative_labels.index(item)
+
+                complete_data.append(relative_data[j])
+                complete_errors.append(relative_errors[j])
+
+            else:
+                complete_data.append(None)
+                complete_errors.append(None)
+
+        extra: [float] = [0.0 for _ in extra_columns]
+
+        # Extra data stuff here
+        extra[0] = turning_points[i]
+
+        array[i] = complete_data + complete_errors + extra
+
+    # Array to DF
+    columns: [str] = [str(f) + 'HZ_SLS' for f in complete_labels] + [str(f) + 'HZ_SLS_STD' for f in complete_labels] + extra_columns
+    frame: pd.DataFrame = pd.DataFrame(array,
+                                       index=line_labels,
+                                       columns=columns)
+    
+    for path in save_paths:
+        frame.to_csv(path)
+
+    return
+
+
 def graph_multiple_relative(data: [[float]],
                             turning_points: [str],
                             labels: [[str]],
@@ -183,6 +266,8 @@ def graph_multiple_relative(data: [[float]],
     for path in save_paths:
         if path is not None:
             plt.savefig(path)
+
+    plt.close()
 
     return
 

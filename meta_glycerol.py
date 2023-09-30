@@ -32,9 +32,10 @@ SUBSECTION LABELS CHANGE BY SECTION
 The files loaded here are ALREADY FILTERED
 We just want to perform more analysis on
 them.
-'''
 
-'''
+FILTERING HAPPENS WITH OBSERVATIONAL BROWNIAN
+SPEED THRESHOLD FALLBACK OF 0.042114570268546765
+
 size	solution	    min freq	max freq	midpoint
 5	    1 X 10-4 M	    12	        17	        14.5
 5	    5 X 10-5 M	    9	        12	        10.5
@@ -64,6 +65,13 @@ z_position_filters: [str] = ['8940', '8960', '8965', '8990', '8980',
 final_file_qualifier: str = 'track_data_summary.csv'
 
 save_number: int = 0
+
+# This holds the brownian straight line speed
+# for each filter. If brownian is not present in
+# a set, it should be searched for here by climbing
+# up the filter list until found.
+brownian_values: [float] = []
+brownian_stds: [float] = []
 
 
 # Loads a list of lists of filters, and creates permutations of them.
@@ -140,7 +148,7 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
     ordered_errors: [[float]] = []
     ordered_line_labels: [str] = []
 
-    subtitle: str = 'From filter set: ' + str(filters)
+    subtitle: str = 'From filter set: ' + str(filters) + '\nPlus or minus 1 STD. Points without bars are interpolated.'
     axis_labels: Tuple[str, str] = ('Applied Frequency (Hz)', 'Mean Straight Line Speed (Pixels Per Frame)')
     save_paths: [str] = [path + str(save_number) + '.png' for path in where]
     save_number += 1
@@ -175,6 +183,7 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
             ordered_turning_points.append(turning_point_lookup[match_index][1])
 
         else:
+            print('Warning! Crossover frequency could not be found. Falling back on 12khz5.')
             ordered_turning_points.append('12500.0')
 
         # Scrape frequencies, not necessarily including turning point
@@ -185,6 +194,29 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
 
         ordered_frequencies.append(current_frequencies[:])
 
+        # Data fixing section below
+
+        # If control was present, insert it into brownian list.
+        # Otherwise, find more recent brownian and use it.
+        if float(current_frequencies[0]) == 0.0:
+            brownian_values.append(ordered_data[-1][0])
+            brownian_stds.append(ordered_errors[-1][0])
+            
+        elif len(brownian_values) != 0 and len(brownian_stds) != 0:
+            ordered_data[-1] = [np.mean(brownian_values)] + ordered_data[-1]
+            ordered_errors[-1] = [np.max(brownian_stds)] + ordered_errors[-1]
+            ordered_frequencies[-1] = ['0.0'] + ordered_frequencies[-1]
+        
+        else:
+            print('Warning! No Brownian value found or previously found.')
+
+            ordered_data[-1] = [0.0] + ordered_data[-1]
+            ordered_errors[-1] = [0.0] + ordered_errors[-1]
+            ordered_frequencies[-1] = ['0.0'] + ordered_frequencies[-1]
+
+            if '\nNon-Present Control' not in subtitle:
+                subtitle += '\nNon-Present Control'
+
     reverser.graph_multiple_relative(
         data=ordered_data,
         turning_points=ordered_turning_points,
@@ -193,6 +225,15 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
         axis_labels=axis_labels,
         line_labels=ordered_line_labels,
         subtitle=subtitle,
+        errors=ordered_errors
+    )
+
+    reverser.save_multiple_relative(
+        data=ordered_data,
+        turning_points=ordered_turning_points,
+        labels=ordered_frequencies,
+        save_paths=[path.replace('.png', '.csv') for path in save_paths],
+        line_labels=ordered_line_labels,
         errors=ordered_errors
     )
     
@@ -231,7 +272,7 @@ if __name__ == '__main__':
     graph_all_from_filter_list_and_dfs(['120[_ ]?um', '12[_ ][vV]'], files, ['/home/jorb/Programs/physicsScripts/'], turning_point_lookup)
 
     print('Loading permutations...')
-    perm_list = []
+    perm_list = [[]]
     for perm in yield_all_filter_permutations(hierarchy):
         for i in range(1, len(perm) + 1):
             sub_perm = perm[:i]
@@ -246,6 +287,11 @@ if __name__ == '__main__':
     for perm in perm_list:
         print(save_number, 'of', len(perm_list))
         graph_all_from_filter_list_and_dfs(perm, files, ['/home/jorb/Programs/physicsScripts/perm/'], turning_point_lookup)
+
+    print('Final mean Brownian:', np.mean(brownian_values), 'w/ std', np.std(brownian_values))
+    print('Final median Brownian:', np.median(brownian_values))
+    print('Final mean Brownian STD:', np.mean(brownian_stds), 'w/ std', np.std(brownian_stds))
+    print('Final median Brownian STD:', np.median(brownian_stds))
 
     # Exit program
     exit(0)

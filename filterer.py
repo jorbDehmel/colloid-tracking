@@ -95,6 +95,9 @@ brownian_speed_threshold: float = 0.0
 brownian_displacement_threshold: float = 0.0
 brownian_linearity_threshold: float = 0.0
 
+do_speed_thresh_fallback: bool = True
+brownian_speed_threshold_fallback: float = 0.042114570268546765
+
 
 # Analyze a file with a given name, and return the results
 # If speed_threshold is nonzero, any track with less speed will
@@ -425,6 +428,9 @@ if __name__ == '__main__':
                                              do_iqr_filter_flags)
 
             end: float = time()
+
+            if i == 0 and do_speed_thresh_fallback:
+                brownian_speed_threshold = brownian_speed_threshold_fallback
 
         if not silent:
             print(name, 'took', round(end - start, 5), 'seconds.')
