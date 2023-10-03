@@ -46,9 +46,10 @@ do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
 do_quality_percentile_filter: bool = True
 quality_percentile_filter: float = 25.0
 
-patterns: [str] = ['((0 ?khz|control).*track|t(0 ?khz|control))',
+patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
                    '(1 ?khz.*track|t1 ?khz)',
+                   '(5 ?khz.*track|t5 ?khz)',
                    '(10 ?khz.*track|t10 ?khz)',
                    '(25 ?khz.*track|t25 ?khz)',
                    '(50 ?khz.*track|t50 ?khz)',
@@ -58,9 +59,10 @@ patterns: [str] = ['((0 ?khz|control).*track|t(0 ?khz|control))',
                    '(200 ?khz.*track|t200 ?khz)',
                    '(300 ?khz.*track|t300 ?khz)']
 
-fallback_patterns: [str] = ['(0 ?khz|control)',
+fallback_patterns: [str] = ['((?<![0-9])0 ?khz|control)',
                             '(0.8 ?khz|800 ?hz)',
                             '1 ?khz',
+                            '5 ?khz',
                             '10 ?khz',
                             '25 ?khz',
                             '50 ?khz',
