@@ -5,11 +5,6 @@ Main particle filtering utilities
 
 Jordan Dehmel, 2023
 jdehmel@outlook.com
-
-TODO:
-- Put all data from a given voltage on one graph
-- Slice up 3d graphs more (tbd, check email for deets)
-
 '''
 
 import pandas as pd
@@ -19,7 +14,6 @@ from os import *
 from sys import *
 from time import time
 import name_fixer
-import re
 
 from reverser import graph_relative
 
@@ -40,11 +34,12 @@ extra_columns: [str] = ['INITIAL_TRACK_COUNT',
 do_std_filter_flags: [bool] = None
 
 # Flags for which -1.5 * IQR filters to apply
-do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
+# do_iqr_filter_flags: [bool] = None
+do_iqr_filter_flags: [bool] = [False, False, False, False, False, False, False]
 # do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
 
 do_quality_percentile_filter: bool = True
-quality_percentile_filter: float = 25.0
+quality_percentile_filter: float = 50.0
 
 patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
@@ -78,8 +73,8 @@ folder: str = ''
 # Conversion from pixels/frame to um/s
 conversion: float = 4 * 0.32
 
-# Tends to erase everything
-do_speed_thresh: bool = False
+# Tends to work well
+do_speed_thresh: bool = True
 
 # Tends to work well
 do_displacement_thresh: bool = False
@@ -97,7 +92,7 @@ brownian_speed_threshold: float = 0.0
 brownian_displacement_threshold: float = 0.0
 brownian_linearity_threshold: float = 0.0
 
-do_speed_thresh_fallback: bool = True
+do_speed_thresh_fallback: bool = False
 brownian_speed_threshold_fallback: float = 0.042114570268546765
 
 
@@ -110,10 +105,15 @@ brownian_speed_threshold_fallback: float = 0.042114570268546765
 # which are above 2 STD/IQR below the mean for their column.
 # Returns a duple containing the output data followed by
 # the standard deviations.
+save_num: int = 0
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
-            return_label: bool = False) -> ([float], [float]):
+            return_label: bool = False, save_filtering_data: bool = True) -> ([float], [float]):
+    
+    global save_num
+    save_num += 1
+
     try:
         # Load file
         csv = pd.read_csv(name)
@@ -135,42 +135,62 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Drop useless data (rows)
     csv.drop(axis=0, inplace=True, labels=[0, 1, 2])
 
+    if save_filtering_data:
+        plt.clf()
+        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()], bins=30, color='r', label='PRE')
+        
+        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        plt.vlines([m - s, m, m + s], 0, 5, colors=['r'])
+
+    # For keeping track of what was dropped
+    dropped_row_indices = []
+
     # Used later
     initial_num_rows: int = len(csv)
 
     # Do thresholding here
-    if do_speed_thresh or do_displacement_thresh or do_linearity_thresh or do_quality_percentile_filter:
+    if do_speed_thresh or do_displacement_thresh or do_linearity_thresh:
         for row in csv.iterrows():
             if do_speed_thresh:
                 # Must meet mean straight line speed threshold
                 if float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) < speed_threshold:
+                    dropped_row_indices.append([row[0], 'SPEED_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
             if do_displacement_thresh:
                 # Must also meet displacement threshold
                 if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
+                    dropped_row_indices.append([row[0], 'DISPLACEMENT_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
             if do_linearity_thresh:
                 # Must pass linearity threshold
                 if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
-                    csv.drop(axis=0, inplace=True, labels=[row[0]])
-                    continue
-
-            if do_quality_percentile_filter:
-                # Must pass quality threshold
-                quality_percentile_threshold: float = percentile(
-                    csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
-
-                if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
+                    dropped_row_indices.append([row[0], 'LINEARITY_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
     if csv.shape[0] == 0:
         print('In file', name)
         print('Error! No items exceeded brownian thresholding.')
+
+    if do_quality_percentile_filter:
+        # Must pass quality threshold
+        quality_percentile_threshold: float = percentile(
+            csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
+        
+        for row in csv.iterrows():
+            if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
+                dropped_row_indices.append([row[0], 'QUALITY_PERCENTILE'])
+                csv.drop(axis=0, inplace=True, labels=[row[0]])
+                continue
+
+    if csv.shape[0] == 0:
+        print('In file', name)
+        print('Error! No items exceeded quality thresholding.')
 
     # Do STD filtering if needed
     if std_drop_flags is not None and len(std_drop_flags) == len(csv.columns):
@@ -189,6 +209,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             for i in range(len(raw_list)):
                 if raw_list[i] < mean_values[i] - (2 * std_values[i]):
+                    dropped_row_indices.append([row[0], 'INTERNAL_STD_FILTERING'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     break
 
@@ -216,6 +237,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             for i in range(len(raw_list)):
                 if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
+                    dropped_row_indices.append([row[0], 'INTERNAL_IQR_FILTERING'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     break
 
@@ -257,6 +279,26 @@ def do_file(name: str, displacement_threshold: float = 0.0,
               final_num_rows, '(' +
               str(round(100 * final_num_rows / initial_num_rows, 3))
               + '% remain)')
+    
+    if save_filtering_data:
+        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()], bins=30, alpha=0.5, color='b', label='POST')
+        plt.title('Pre V. Post Filter SLS w/ Means\n' + name)
+
+        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        plt.vlines([m - s, m, m + s], 0, 5, colors=['b'])
+        plt.vlines([brownian_speed_threshold], 0, 10, colors=['black'])
+
+        plt.legend()
+
+        plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png')
+        # plt.show()
+        
+        plt.close()
+
+        dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=['CSV_TRACK_ROW_NUMBER', 'REASON'])
+        dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.csv')
+        dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
     if return_label:
         label: str = ''

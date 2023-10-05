@@ -24,7 +24,7 @@ def fix_names(patterns: [str], given_names: [str] = None) -> [str | None]:
             for i, pattern in enumerate(patterns):
                 if out[i] is not None:
                     continue
-                elif re.search(pattern, name) and name[-4:] == '.csv':
+                elif re.search(pattern, name) and name[-4:] == '.csv' and name[0] != '_':
                     out[i] = name
     else:
         for name in given_names:
