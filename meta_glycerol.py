@@ -207,8 +207,8 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
 
         else:
             if not silent:
-                print('Warning! Crossover frequency could not be found. Falling back on 12khz5.')
-            ordered_turning_points.append('12500.0')
+                print('Warning! Crossover frequency could not be found. Falling back on 25khz5.')
+            ordered_turning_points.append('25500.0')
 
         # Scrape frequencies, not necessarily including turning point
         current_frequencies: [str] = []
@@ -356,7 +356,7 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
 
             plt.xticks(rotation=-45)
             plt.rc('font', size=8)
-            fig = plt.figure(figsize=(10, 10), dpi=200)
+            plt.figure(figsize=(10, 10), dpi=200)
 
             plt.title('Mean Straight Line Speed by Depth\nPlus or Minus 1 Standard Deviation\n' + str(filters) + ' ' + str(key) + 'hz')
             plt.xlabel('Z-Position')

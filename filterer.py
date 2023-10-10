@@ -96,6 +96,10 @@ do_speed_thresh_fallback: bool = False
 brownian_speed_threshold_fallback: float = 0.042114570268546765
 
 
+do_filter_scatter_plots: bool = True
+filter_scatter_plots_data: [[[]]] = []
+
+
 # Analyze a file with a given name, and return the results
 # If speed_threshold is nonzero, any track with less speed will
 # be filtered out. This is similar for the linearity and displacement
@@ -155,21 +159,21 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             if do_speed_thresh:
                 # Must meet mean straight line speed threshold
                 if float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) < speed_threshold:
-                    dropped_row_indices.append([row[0], 'SPEED_THRESHOLD'])
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'SPEED_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
             if do_displacement_thresh:
                 # Must also meet displacement threshold
                 if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
-                    dropped_row_indices.append([row[0], 'DISPLACEMENT_THRESHOLD'])
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DISPLACEMENT_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
             if do_linearity_thresh:
                 # Must pass linearity threshold
                 if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
-                    dropped_row_indices.append([row[0], 'LINEARITY_THRESHOLD'])
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'LINEARITY_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -184,7 +188,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         
         for row in csv.iterrows():
             if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
-                dropped_row_indices.append([row[0], 'QUALITY_PERCENTILE'])
+                dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
                 csv.drop(axis=0, inplace=True, labels=[row[0]])
                 continue
 
@@ -209,7 +213,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             for i in range(len(raw_list)):
                 if raw_list[i] < mean_values[i] - (2 * std_values[i]):
-                    dropped_row_indices.append([row[0], 'INTERNAL_STD_FILTERING'])
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     break
 
@@ -237,7 +241,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             for i in range(len(raw_list)):
                 if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
-                    dropped_row_indices.append([row[0], 'INTERNAL_IQR_FILTERING'])
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     break
 
@@ -296,9 +300,29 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         
         plt.close()
 
-        dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=['CSV_TRACK_ROW_NUMBER', 'REASON'])
+        dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=['CSV_TRACK_ROW_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'REASON'])
         dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
+
+        if do_filter_scatter_plots:
+            # Build an additional array w/ all the data, dropped or not.
+            # Save the SLS for each track, as well as whether or not
+            # it was dropped. Later we will assemble this into a
+            # scatter plot
+
+            # Build into a py array
+            data: [[]] = []
+
+            for item in csv.iterrows():
+                data.append([item[0], item[1]['MEAN_STRAIGHT_LINE_SPEED'], False])
+
+            for item in dropped_row_indices:
+                data.append([item[0], item[1], True])
+
+            # Append to global data for filter scatter plots
+            filter_scatter_plots_data.append(data[:])
+
+            pass
 
     if return_label:
         label: str = ''
@@ -521,6 +545,7 @@ if __name__ == '__main__':
     plt.plot(out_csv['FILTERED_TRACK_COUNT'])
 
     plt.savefig('TRACK_COUNT.png')
+    plt.close()
 
     graph_relative(
         out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
@@ -531,9 +556,6 @@ if __name__ == '__main__':
         ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if secondary_save_path is not None:
-        plt.savefig(secondary_save_path +
-                    name_fixer.get_cwd() + '_TRACK_COUNT')
-
         graph_relative(
             out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
             '10000.0',
@@ -541,6 +563,45 @@ if __name__ == '__main__':
             'MEAN_STRAIGHT_LINE_SPEED',
             secondary_save_path + name_fixer.get_cwd() + '_RELATIVE_SLS.png',
             ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
+
+    if do_filter_scatter_plots:
+        plt.clf()
+
+        x_values = []
+        y_values = []
+        colors = []
+
+        everything_labels: [str] = ['FREQUENCY', 'TRACK_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
+        everything = []
+
+        for i, freq in enumerate(filter_scatter_plots_data):
+            for item in freq:
+                # item is a single track's info
+                # = (name, sls, was_filtered)
+
+                x_values.append(float(floated_names[i]))
+                y_values.append(float(item[1]))
+                colors.append('r' if item[2] else 'b')
+
+                everything.append([floated_names[i], item[0], item[1], item[2]])
+
+        # Save as csv
+        csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
+        csv.to_csv(secondary_save_path + '/all_tracks.csv')
+        csv.to_csv('/home/jorb/Programs/physicsScripts/all_tracks.csv')
+
+        # Create actual scatter plot
+        plt.scatter(x_values, y_values, c=colors, sizes=[3 for _ in x_values], alpha=0.5)
+
+        plt.title('Straight Line Speed By Applied Frequency')
+        plt.xlabel('Applied Frequency (Hz)')
+        plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
+
+        plt.savefig(secondary_save_path + '/filter_scatter.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/filter_scatter.png')
+        plt.show()
+
+        plt.close()
 
     if not silent:
         print('Done.')
