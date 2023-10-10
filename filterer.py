@@ -97,6 +97,7 @@ brownian_speed_threshold_fallback: float = 0.042114570268546765
 
 
 do_filter_scatter_plots: bool = True
+do_extra_filter_scatter_plots: bool = False
 filter_scatter_plots_data: [[[]]] = []
 
 
@@ -565,59 +566,107 @@ if __name__ == '__main__':
             ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if do_filter_scatter_plots:
-        x_values = []
-        y_values = []
-        colors = []
-
-        everything_labels: [str] = ['FREQUENCY', 'TRACK_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
+        everything_labels: [str] = ['FREQUENCY', 'ORIGINAL_POSITION', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
         everything = []
 
         only_kept_x = []
         only_kept_y = []
+
+        only_lost_x = []
+        only_lost_y = []
 
         for i, freq in enumerate(filter_scatter_plots_data):
             for item in freq:
                 # item is a single track's info
                 # = (name, sls, was_filtered)
 
-                x_values.append(floated_names[i])
-                y_values.append(float(item[1]))
-                colors.append('r' if item[2] else 'b')
-
-                everything.append([floated_names[i], item[0], item[1], item[2]])
-
                 if not item[2]:
                     only_kept_x.append(floated_names[i])
                     only_kept_y.append(float(item[1]))
+                else:
+                    only_lost_x.append(floated_names[i])
+                    only_lost_y.append(float(item[1]))
+
+                everything.append([floated_names[i], item[0], item[1], item[2]])
 
         # Save as csv
+
+        # Sort data such that its primary sort in frequency, and secondary is track number
+        # This is just aesthetic
+        everything.sort(key=lambda i: float(i[0]) * 1000 + float(i[1]))
+
         csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
         csv.to_csv(secondary_save_path + '/all_tracks.csv')
         csv.to_csv('/home/jorb/Programs/physicsScripts/all_tracks.csv')
 
+        floated_names.sort(key=lambda x: float(x))
+
         # Create actual scatter plot
         plt.clf()
-        plt.scatter(x_values, y_values, c=colors, sizes=[3 for _ in x_values], alpha=0.5)
 
-        plt.title('Straight Line Speed By Applied Frequency\nRed = Filtered Out, Blue = Kept')
+        plt.figure(figsize=(6, 4), dpi=400)
+
+        plt.plot(floated_names, out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(), label='Post-Filter Mean', alpha=0.5)
+
+        plt.scatter(only_lost_x + only_kept_x,
+                    only_lost_y + only_kept_y,
+                    marker='.',
+                    c='r',
+                    sizes=[5 for _ in only_lost_x + only_kept_x],
+                    alpha=0.5,
+                    label='Original')
+
+        plt.scatter(only_kept_x,
+                    only_kept_y,
+                    marker='^',
+                    c='b',
+                    sizes=[5 for _ in only_lost_x + only_kept_x],
+                    alpha=0.5,
+                    label='Post-Filter')
+
+        plt.title('Straight Line Speed By Applied Frequency\nRed = Original, Blue = Kept')
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-        plt.savefig(secondary_save_path + '/filter_scatter.png')
-        plt.savefig('/home/jorb/Programs/physicsScripts/filter_scatter.png')
-        
-        # Other one
-        plt.clf()
-        plt.scatter(only_kept_x, only_kept_y, c=['b' for _ in only_kept_y], sizes=[3 for _ in x_values])
+        plt.legend()
 
-        plt.title('Post-Filter Straight Line Speed By Applied Frequency')
-        plt.xlabel('Applied Frequency (Hz)')
-        plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
-
-        plt.savefig(secondary_save_path + '/filtered_scatter.png')
-        plt.savefig('/home/jorb/Programs/physicsScripts/filtered_scatter.png')
+        plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_filter_scatter.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_filter_scatter.png')
 
         plt.close()
+
+        if do_extra_filter_scatter_plots:        
+            # Other one
+            plt.clf()
+
+            plt.figure(figsize=(6, 4), dpi=400)
+
+            plt.scatter(only_kept_x, only_kept_y, c=['b' for _ in only_kept_y], sizes=[5 for _ in only_kept_x])
+
+            plt.title('Post-Filter Straight Line Speed By Applied Frequency\n(Only tracks which WERE included in the final dataset appear here)')
+            plt.xlabel('Applied Frequency (Hz)')
+            plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
+
+            plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_filtered_scatter.png')
+            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_filtered_scatter.png')
+
+            plt.close()
+
+            # Other other one
+            plt.clf()
+
+            plt.figure(figsize=(6, 4), dpi=400)
+
+            plt.scatter(only_lost_x, only_lost_y, c=['b' for _ in only_lost_y], sizes=[5 for _ in only_lost_x])
+
+            plt.title('Filtered Out Straight Line Speed By Applied Frequency\n(Only tracks which were NOT included in the final dataset appear here)')
+            plt.xlabel('Applied Frequency (Hz)')
+            plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
+
+            plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_lost_scatter.png')
+            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_lost_scatter.png')
+
+            plt.close()
 
     if not silent:
         print('Done.')
