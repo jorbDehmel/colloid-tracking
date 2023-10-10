@@ -35,11 +35,11 @@ do_std_filter_flags: [bool] = None
 
 # Flags for which -1.5 * IQR filters to apply
 # do_iqr_filter_flags: [bool] = None
-do_iqr_filter_flags: [bool] = [False, False, False, False, False, False, False]
-# do_iqr_filter_flags: [bool] = [True, False, True, True, True, True, True]
+do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
+# do_iqr_filter_flags: [bool] = [True, True, True, True, True, True, True]
 
 do_quality_percentile_filter: bool = True
-quality_percentile_filter: float = 50.0
+quality_percentile_filter: float = 25.0
 
 patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
@@ -565,8 +565,6 @@ if __name__ == '__main__':
             ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if do_filter_scatter_plots:
-        plt.clf()
-
         x_values = []
         y_values = []
         colors = []
@@ -574,16 +572,23 @@ if __name__ == '__main__':
         everything_labels: [str] = ['FREQUENCY', 'TRACK_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
         everything = []
 
+        only_kept_x = []
+        only_kept_y = []
+
         for i, freq in enumerate(filter_scatter_plots_data):
             for item in freq:
                 # item is a single track's info
                 # = (name, sls, was_filtered)
 
-                x_values.append(float(floated_names[i]))
+                x_values.append(floated_names[i])
                 y_values.append(float(item[1]))
                 colors.append('r' if item[2] else 'b')
 
                 everything.append([floated_names[i], item[0], item[1], item[2]])
+
+                if not item[2]:
+                    only_kept_x.append(floated_names[i])
+                    only_kept_y.append(float(item[1]))
 
         # Save as csv
         csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
@@ -591,15 +596,26 @@ if __name__ == '__main__':
         csv.to_csv('/home/jorb/Programs/physicsScripts/all_tracks.csv')
 
         # Create actual scatter plot
+        plt.clf()
         plt.scatter(x_values, y_values, c=colors, sizes=[3 for _ in x_values], alpha=0.5)
 
-        plt.title('Straight Line Speed By Applied Frequency')
+        plt.title('Straight Line Speed By Applied Frequency\nRed = Filtered Out, Blue = Kept')
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
         plt.savefig(secondary_save_path + '/filter_scatter.png')
         plt.savefig('/home/jorb/Programs/physicsScripts/filter_scatter.png')
-        plt.show()
+        
+        # Other one
+        plt.clf()
+        plt.scatter(only_kept_x, only_kept_y, c=['b' for _ in only_kept_y], sizes=[3 for _ in x_values])
+
+        plt.title('Post-Filter Straight Line Speed By Applied Frequency')
+        plt.xlabel('Applied Frequency (Hz)')
+        plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
+
+        plt.savefig(secondary_save_path + '/filtered_scatter.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/filtered_scatter.png')
 
         plt.close()
 
