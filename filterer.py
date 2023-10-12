@@ -116,7 +116,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
             return_label: bool = False, save_filtering_data: bool = True) -> ([float], [float]):
     
-    global save_num
+    global save_num, secondary_save_path
     save_num += 1
 
     try:
@@ -323,7 +323,37 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             # Append to global data for filter scatter plots
             filter_scatter_plots_data.append(data[:])
 
-            pass
+            plt.clf()
+
+            plt.figure(figsize=(6, 4), dpi=500)
+            plt.title(name[-60:])
+            plt.xlabel('Track Original Index')
+            plt.ylabel('Mean Straight Line Speed')
+
+            if brownian_speed_threshold != 0.0:
+                plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
+                        [brownian_speed_threshold] + [brownian_speed_threshold for _ in csv.iterrows()],
+                        c='black',
+                        label='Brownian')
+
+            # Kept data
+            plt.scatter([int(item[0]) for item in csv.iterrows()],
+                        [float(item[1]['MEAN_STRAIGHT_LINE_SPEED']) for item in csv.iterrows()],
+                        c='b',
+                        label='Kept')
+
+            # Lost data
+            plt.scatter([int(item[0]) for item in dropped_row_indices],
+                        [float(item[1]) for item in dropped_row_indices],
+                        c='r',
+                        label='Lost')
+            
+            plt.legend()
+
+            plt.savefig(secondary_save_path + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
+            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
+
+            plt.close()
 
     if return_label:
         label: str = ''
