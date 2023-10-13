@@ -115,11 +115,13 @@ filter_scatter_plots_data: [[[]]] = []
 # Returns a duple containing the output data followed by
 # the standard deviations.
 save_num: int = 0
+
+
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
             return_label: bool = False, save_filtering_data: bool = False) -> ([float], [float]):
-    
+
     global save_num, secondary_save_path
     save_num += 1
 
@@ -146,10 +148,13 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     if save_filtering_data:
         plt.clf()
-        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()], bins=30, color='r', label='PRE')
-        
-        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
-        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in csv.iterrows()], bins=30, color='r', label='PRE')
+
+        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in csv.iterrows()])
+        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                for row in csv.iterrows()])
         plt.vlines([m - s, m, m + s], 0, 5, colors=['r'])
 
     # For keeping track of what was dropped
@@ -166,7 +171,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 # Must meet mean straight line speed threshold
                 if float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) < speed_threshold:
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'SPEED_THRESHOLD'])
+                    dropped_row_indices.append(
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'SPEED_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -179,12 +185,13 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 # Must also meet displacement threshold
                 if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DISPLACEMENT_THRESHOLD'])
+                    dropped_row_indices.append(
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DISPLACEMENT_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
         if csv.shape[0] == 0:
-            print('In file', name)  
+            print('In file', name)
             print('Error! No items exceeded brownian displacement thresholding.')
             raise Exception('Overfiltering Error')
 
@@ -192,7 +199,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 # Must pass linearity threshold
                 if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'LINEARITY_THRESHOLD'])
+                    dropped_row_indices.append(
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'LINEARITY_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -205,10 +213,11 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             # Must pass quality threshold
             quality_percentile_threshold: float = percentile(
                 csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
-            
+
             for row in csv.iterrows():
                 if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
+                    dropped_row_indices.append(
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -234,19 +243,22 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
                 for i in range(len(raw_list)):
                     if raw_list[i] < mean_values[i] - (2 * std_values[i]):
-                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                        dropped_row_indices.append(
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
                     # Filter anything above, but ONLY if this is control
                     elif speed_threshold == 0.0 and raw_list[i] > mean_values[i] + (2 * std_values[i]):
-                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                        dropped_row_indices.append(
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
         if csv.shape[0] == 0:
             print('In file', name)
-            print('Error! No items survived brownian thresholding and standard deviation filtering.')
+            print(
+                'Error! No items survived brownian thresholding and standard deviation filtering.')
             raise Exception('Overfiltering Error')
 
         # Do IQR filtering if needed
@@ -269,15 +281,15 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
                 for i in range(len(raw_list)):
                     if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
-                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
+                        dropped_row_indices.append(
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
-                
-
         if csv.shape[0] == 0:
             print('In file', name)
-            print('Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
+            print(
+                'Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
             raise Exception('Overfiltering Error')
     except Exception as e:
         print(e)
@@ -320,26 +332,31 @@ def do_file(name: str, displacement_threshold: float = 0.0,
               final_num_rows, '(' +
               str(round(100 * final_num_rows / initial_num_rows, 3))
               + '% remain)')
-    
+
     if save_filtering_data:
-        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()], bins=30, alpha=0.5, color='b', label='POST')
+        plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in csv.iterrows()], bins=30, alpha=0.5, color='b', label='POST')
         plt.title('Pre V. Post Filter SLS w/ Means\n' + name)
 
-        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
-        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in csv.iterrows()])
+        m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in csv.iterrows()])
+        s = std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                for row in csv.iterrows()])
         plt.vlines([m - s, m, m + s], 0, 5, colors=['b'])
         plt.vlines([brownian_speed_threshold], 0, 10, colors=['black'])
 
         lgd = plt.legend()
 
         plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png',
-            bbox_extra_artists=(lgd,), bbox_inches='tight')
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
         # plt.show()
-        
+
         plt.close()
 
-        dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=['CSV_TRACK_ROW_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'REASON'])
-        dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.csv')
+        dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=[
+                                             'CSV_TRACK_ROW_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'REASON'])
+        dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' +
+                       name.replace('/', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
     if do_filter_scatter_plots:
@@ -370,22 +387,24 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         # Brownian line
         if brownian_speed_threshold != 0.0:
             plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
-                    [brownian_speed_threshold] + [brownian_speed_threshold for _ in csv.iterrows()],
-                    c='black',
-                    label='Brownian Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
+                     [brownian_speed_threshold] +
+                     [brownian_speed_threshold for _ in csv.iterrows()],
+                     c='black',
+                     label='Brownian Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
 
         # Brownian mean + some amount of std explicit line
         else:
             value: float = output_data[5] + brownian_multiplier * output_std[5]
 
             plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
-                    [value] + [value for _ in csv.iterrows()],
-                    c='black',
-                    label='Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
+                     [value] + [value for _ in csv.iterrows()],
+                     c='black',
+                     label='Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
 
         # Kept data
         plt.scatter([int(item[0]) for item in csv.iterrows()],
-                    [float(item[1]['MEAN_STRAIGHT_LINE_SPEED']) for item in csv.iterrows()],
+                    [float(item[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                     for item in csv.iterrows()],
                     c='b',
                     label='Kept')
 
@@ -394,12 +413,13 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     [float(item[1]) for item in dropped_row_indices],
                     c='r',
                     label='Lost')
-        
+
         lgd = plt.legend()
 
-        plt.savefig(secondary_save_path + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
+        plt.savefig(secondary_save_path + name.replace('/', '_') +
+                    str(save_num) + '_track_scatter.png')
         plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name.replace('/', '_') + str(save_num) + '_track_scatter.png',
-            bbox_extra_artists=(lgd,), bbox_inches='tight')
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
 
@@ -568,7 +588,8 @@ if __name__ == '__main__':
 
             # Uses updated brownian standards:
             # In order to pass the filter, it must be more than 2 std from brownian
-            brownian_speed_threshold = array[0][5] + brownian_multiplier * std_array[0][5]
+            brownian_speed_threshold = array[0][5] + \
+                brownian_multiplier * std_array[0][5]
 
             brownian_displacement_threshold = array[0][0]
             quality_threshold = array[0][3]
@@ -654,7 +675,8 @@ if __name__ == '__main__':
             ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if do_filter_scatter_plots:
-        everything_labels: [str] = ['FREQUENCY', 'ORIGINAL_POSITION', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
+        everything_labels: [str] = [
+            'FREQUENCY', 'ORIGINAL_POSITION', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
         everything = []
 
         only_kept_x = []
@@ -675,7 +697,8 @@ if __name__ == '__main__':
                     only_lost_x.append(floated_names[i])
                     only_lost_y.append(float(item[1]))
 
-                everything.append([floated_names[i], item[0], item[1], item[2]])
+                everything.append(
+                    [floated_names[i], item[0], item[1], item[2]])
 
         # Save as csv
 
@@ -694,7 +717,8 @@ if __name__ == '__main__':
 
         plt.figure(figsize=(6, 4), dpi=400)
 
-        plt.plot(floated_names, out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(), label='Post-Filter Mean', alpha=0.5)
+        plt.plot(floated_names, out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(
+            float).to_list(), label='Post-Filter Mean', alpha=0.5)
 
         plt.scatter(only_lost_x + only_kept_x,
                     only_lost_y + only_kept_y,
@@ -712,31 +736,38 @@ if __name__ == '__main__':
                     alpha=0.5,
                     label='Post-Filter')
 
-        plt.title('Straight Line Speed By Applied Frequency\nRed = Original, Blue = Kept')
+        plt.title(
+            'Straight Line Speed By Applied Frequency\nRed = Original, Blue = Kept')
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
         plt.legend()
 
-        plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_filter_scatter.png')
-        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_filter_scatter.png')
+        plt.savefig(secondary_save_path + '/' +
+                    name_fixer.get_cwd() + '_filter_scatter.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
+                    name_fixer.get_cwd() + '_filter_scatter.png')
 
         plt.close()
 
-        if do_extra_filter_scatter_plots:        
+        if do_extra_filter_scatter_plots:
             # Other one
             plt.clf()
 
             plt.figure(figsize=(6, 4), dpi=400)
 
-            plt.scatter(only_kept_x, only_kept_y, c=['b' for _ in only_kept_y], sizes=[5 for _ in only_kept_x])
+            plt.scatter(only_kept_x, only_kept_y, c=[
+                        'b' for _ in only_kept_y], sizes=[5 for _ in only_kept_x])
 
-            plt.title('Post-Filter Straight Line Speed By Applied Frequency\n(Only tracks which WERE included in the final dataset appear here)')
+            plt.title(
+                'Post-Filter Straight Line Speed By Applied Frequency\n(Only tracks which WERE included in the final dataset appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-            plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_filtered_scatter.png')
-            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_filtered_scatter.png')
+            plt.savefig(secondary_save_path + '/' +
+                        name_fixer.get_cwd() + '_filtered_scatter.png')
+            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
+                        name_fixer.get_cwd() + '_filtered_scatter.png')
 
             plt.close()
 
@@ -745,14 +776,18 @@ if __name__ == '__main__':
 
             plt.figure(figsize=(6, 4), dpi=400)
 
-            plt.scatter(only_lost_x, only_lost_y, c=['b' for _ in only_lost_y], sizes=[5 for _ in only_lost_x])
+            plt.scatter(only_lost_x, only_lost_y, c=[
+                        'b' for _ in only_lost_y], sizes=[5 for _ in only_lost_x])
 
-            plt.title('Filtered Out Straight Line Speed By Applied Frequency\n(Only tracks which were NOT included in the final dataset appear here)')
+            plt.title(
+                'Filtered Out Straight Line Speed By Applied Frequency\n(Only tracks which were NOT included in the final dataset appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-            plt.savefig(secondary_save_path + '/' + name_fixer.get_cwd() + '_lost_scatter.png')
-            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name_fixer.get_cwd() + '_lost_scatter.png')
+            plt.savefig(secondary_save_path + '/' +
+                        name_fixer.get_cwd() + '_lost_scatter.png')
+            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
+                        name_fixer.get_cwd() + '_lost_scatter.png')
 
             plt.close()
 
