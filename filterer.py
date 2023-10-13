@@ -31,15 +31,15 @@ extra_columns: [str] = ['INITIAL_TRACK_COUNT',
 # Flags for which -2 * STD filters to apply
 # do_std_filter_flags: [bool] = [False, False, False, True, False, True, True]
 # do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
-do_std_filter_flags: [bool] = None
+do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
 
 # Flags for which -1.5 * IQR filters to apply
-# do_iqr_filter_flags: [bool] = None
-do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
+do_iqr_filter_flags: [bool] = None
+# do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
 # do_iqr_filter_flags: [bool] = [True, True, True, True, True, True, True]
 
-do_quality_percentile_filter: bool = True
-quality_percentile_filter: float = 25.0
+do_quality_percentile_filter: bool = False
+quality_percentile_filter: float = 50.0
 
 patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
@@ -75,6 +75,10 @@ conversion: float = 4 * 0.32
 
 # Tends to work well
 do_speed_thresh: bool = True
+
+# When do_speed_thresh, any tracks w/ SLS <= brownian + brownian_multiplier * brownian_std
+# will be dropped
+brownian_multiplier: float = 2.0
 
 # Tends to work well
 do_displacement_thresh: bool = False
@@ -114,7 +118,7 @@ save_num: int = 0
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
-            return_label: bool = False, save_filtering_data: bool = True) -> ([float], [float]):
+            return_label: bool = False, save_filtering_data: bool = False) -> ([float], [float]):
     
     global save_num, secondary_save_path
     save_num += 1
@@ -154,102 +158,134 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Used later
     initial_num_rows: int = len(csv)
 
-    # Do thresholding here
-    if do_speed_thresh or do_displacement_thresh or do_linearity_thresh:
-        for row in csv.iterrows():
-            if do_speed_thresh:
+    backup = csv.copy(deep=True)
+
+    try:
+        # Do thresholding here
+        if do_speed_thresh:
+            for row in csv.iterrows():
                 # Must meet mean straight line speed threshold
                 if float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) < speed_threshold:
                     dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'SPEED_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
-            if do_displacement_thresh:
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items exceeded brownian speed thresholding.')
+            raise Exception('Overfiltering Error')
+
+        if do_displacement_thresh:
+            for row in csv.iterrows():
                 # Must also meet displacement threshold
                 if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
                     dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DISPLACEMENT_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
-            if do_linearity_thresh:
+        if csv.shape[0] == 0:
+            print('In file', name)  
+            print('Error! No items exceeded brownian displacement thresholding.')
+            raise Exception('Overfiltering Error')
+
+        if do_linearity_thresh:
+            for row in csv.iterrows():
                 # Must pass linearity threshold
                 if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
                     dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'LINEARITY_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
-    if csv.shape[0] == 0:
-        print('In file', name)
-        print('Error! No items exceeded brownian thresholding.')
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items exceeded brownian linearity thresholding.')
+            raise Exception('Overfiltering Error')
 
-    if do_quality_percentile_filter:
-        # Must pass quality threshold
-        quality_percentile_threshold: float = percentile(
-            csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
-        
-        for row in csv.iterrows():
-            if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
-                dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
-                csv.drop(axis=0, inplace=True, labels=[row[0]])
-                continue
-
-    if csv.shape[0] == 0:
-        print('In file', name)
-        print('Error! No items exceeded quality thresholding.')
-
-    # Do STD filtering if needed
-    if std_drop_flags is not None and len(std_drop_flags) == len(csv.columns):
-
-        # Collect STD's for the requested items
-        std_values: [float] = [
-            std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
-
-        # Collect means
-        mean_values: [float] = [
-            mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
-
-        # Iterate over rows, dropping if needed
-        for row in csv.iterrows():
-            raw_list: [float] = row[1].astype(float).to_list()
-
-            for i in range(len(raw_list)):
-                if raw_list[i] < mean_values[i] - (2 * std_values[i]):
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+        if do_quality_percentile_filter:
+            # Must pass quality threshold
+            quality_percentile_threshold: float = percentile(
+                csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
+            
+            for row in csv.iterrows():
+                if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
+                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
-                    break
+                    continue
 
-    if csv.shape[0] == 0:
-        print('In file', name)
-        print('Error! No items survived brownian thresholding and standard deviation filtering.')
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items exceeded quality thresholding.')
+            raise Exception('Overfiltering Error')
 
-    # Do IQR filtering if needed
-    if iqr_drop_flags is not None and len(iqr_drop_flags) == len(csv.columns):
+        # Do STD filtering if needed
+        if std_drop_flags is not None and len(std_drop_flags) == len(csv.columns):
 
-        # Calculate IQR values
-        iqr_values: [float] = [0.0 for i in csv.columns]
-        for i, col_name in enumerate(csv.columns):
-            if iqr_drop_flags[i]:
-                q1, q3 = percentile(csv[col_name].astype(float), [25, 75])
-                iqr_values[i] = q3 - q1
+            # Collect STD's for the requested items
+            std_values: [float] = [
+                std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
 
-        # Collect means
-        mean_values: [float] = [
-            mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0 for col_name in csv.columns]
+            # Collect means
+            mean_values: [float] = [
+                mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
 
-        # Iterate over rows, dropping if needed
-        for row in csv.iterrows():
-            raw_list: [float] = row[1].astype(float).to_list()
+            # Iterate over rows, dropping if needed
+            for row in csv.iterrows():
+                raw_list: [float] = row[1].astype(float).to_list()
 
-            for i in range(len(raw_list)):
-                if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
-                    dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
-                    csv.drop(axis=0, inplace=True, labels=[row[0]])
-                    break
+                for i in range(len(raw_list)):
+                    if raw_list[i] < mean_values[i] - (2 * std_values[i]):
+                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                        csv.drop(axis=0, inplace=True, labels=[row[0]])
+                        break
 
-    if csv.shape[0] == 0:
-        print('In file', name)
-        print('Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
-        raise Exception('Overfiltering Error')
+                    # Filter anything above, but ONLY if this is control
+                    elif speed_threshold == 0.0 and raw_list[i] > mean_values[i] + (2 * std_values[i]):
+                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                        csv.drop(axis=0, inplace=True, labels=[row[0]])
+                        break
+
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items survived brownian thresholding and standard deviation filtering.')
+            raise Exception('Overfiltering Error')
+
+        # Do IQR filtering if needed
+        if iqr_drop_flags is not None and len(iqr_drop_flags) == len(csv.columns):
+
+            # Calculate IQR values
+            iqr_values: [float] = [0.0 for i in csv.columns]
+            for i, col_name in enumerate(csv.columns):
+                if iqr_drop_flags[i]:
+                    q1, q3 = percentile(csv[col_name].astype(float), [25, 75])
+                    iqr_values[i] = q3 - q1
+
+            # Collect means
+            mean_values: [float] = [
+                mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0 for col_name in csv.columns]
+
+            # Iterate over rows, dropping if needed
+            for row in csv.iterrows():
+                raw_list: [float] = row[1].astype(float).to_list()
+
+                for i in range(len(raw_list)):
+                    if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
+                        dropped_row_indices.append([row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
+                        csv.drop(axis=0, inplace=True, labels=[row[0]])
+                        break
+
+                
+
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
+            raise Exception('Overfiltering Error')
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting to input data!')
+
+        csv = backup.copy(deep=True)
+
+    del backup
 
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
@@ -294,9 +330,10 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         plt.vlines([m - s, m, m + s], 0, 5, colors=['b'])
         plt.vlines([brownian_speed_threshold], 0, 10, colors=['black'])
 
-        plt.legend()
+        lgd = plt.legend()
 
-        plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png',
+            bbox_extra_artists=(lgd,), bbox_inches='tight')
         # plt.show()
         
         plt.close()
@@ -305,55 +342,66 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
-        if do_filter_scatter_plots:
-            # Build an additional array w/ all the data, dropped or not.
-            # Save the SLS for each track, as well as whether or not
-            # it was dropped. Later we will assemble this into a
-            # scatter plot
+    if do_filter_scatter_plots:
+        # Build an additional array w/ all the data, dropped or not.
+        # Save the SLS for each track, as well as whether or not
+        # it was dropped. Later we will assemble this into a
+        # scatter plot
 
-            # Build into a py array
-            data: [[]] = []
+        # Build into a py array
+        data: [[]] = []
 
-            for item in csv.iterrows():
-                data.append([item[0], item[1]['MEAN_STRAIGHT_LINE_SPEED'], False])
+        for item in csv.iterrows():
+            data.append([item[0], item[1]['MEAN_STRAIGHT_LINE_SPEED'], False])
 
-            for item in dropped_row_indices:
-                data.append([item[0], item[1], True])
+        for item in dropped_row_indices:
+            data.append([item[0], item[1], True])
 
-            # Append to global data for filter scatter plots
-            filter_scatter_plots_data.append(data[:])
+        # Append to global data for filter scatter plots
+        filter_scatter_plots_data.append(data[:])
 
-            plt.clf()
+        plt.clf()
 
-            plt.figure(figsize=(6, 4), dpi=500)
-            plt.title(name[-60:])
-            plt.xlabel('Track Original Index')
-            plt.ylabel('Mean Straight Line Speed')
+        plt.figure(figsize=(6, 4), dpi=500)
+        plt.title(name[-60:])
+        plt.xlabel('Track Original Index')
+        plt.ylabel('Mean Straight Line Speed')
 
-            if brownian_speed_threshold != 0.0:
-                plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
-                        [brownian_speed_threshold] + [brownian_speed_threshold for _ in csv.iterrows()],
-                        c='black',
-                        label='Brownian')
+        # Brownian line
+        if brownian_speed_threshold != 0.0:
+            plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
+                    [brownian_speed_threshold] + [brownian_speed_threshold for _ in csv.iterrows()],
+                    c='black',
+                    label='Brownian Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
 
-            # Kept data
-            plt.scatter([int(item[0]) for item in csv.iterrows()],
-                        [float(item[1]['MEAN_STRAIGHT_LINE_SPEED']) for item in csv.iterrows()],
-                        c='b',
-                        label='Kept')
+        # Brownian mean + some amount of std explicit line
+        else:
+            value: float = output_data[5] + brownian_multiplier * output_std[5]
 
-            # Lost data
-            plt.scatter([int(item[0]) for item in dropped_row_indices],
-                        [float(item[1]) for item in dropped_row_indices],
-                        c='r',
-                        label='Lost')
-            
-            plt.legend()
+            plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
+                    [value] + [value for _ in csv.iterrows()],
+                    c='black',
+                    label='Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
 
-            plt.savefig(secondary_save_path + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
-            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
+        # Kept data
+        plt.scatter([int(item[0]) for item in csv.iterrows()],
+                    [float(item[1]['MEAN_STRAIGHT_LINE_SPEED']) for item in csv.iterrows()],
+                    c='b',
+                    label='Kept')
 
-            plt.close()
+        # Lost data
+        plt.scatter([int(item[0]) for item in dropped_row_indices],
+                    [float(item[1]) for item in dropped_row_indices],
+                    c='r',
+                    label='Lost')
+        
+        lgd = plt.legend()
+
+        plt.savefig(secondary_save_path + name.replace('/', '_') + str(save_num) + '_track_scatter.png')
+        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name.replace('/', '_') + str(save_num) + '_track_scatter.png',
+            bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        plt.close()
 
     if return_label:
         label: str = ''
@@ -506,14 +554,24 @@ if __name__ == '__main__':
                                                  None, None)
             except:
                 print("ERROR DURING COLLECTION OF FILE", folder + sep + name)
-                array[i] = [None for i in len(array[i])]
-                std_array[i] = [None for i in len(std_array[i])]
+                array[i] = [None for i in range(len(array[i]))]
+                std_array[i] = [None for i in range(len(std_array[i]))]
 
             end: float = time()
 
+            '''
+            col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
+                                'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
+                                'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
+                                'LINEARITY_OF_FORWARD_PROGRESSION']
+            '''
+
+            # Uses updated brownian standards:
+            # In order to pass the filter, it must be more than 2 std from brownian
+            brownian_speed_threshold = array[0][5] + brownian_multiplier * std_array[0][5]
+
             brownian_displacement_threshold = array[0][0]
             quality_threshold = array[0][3]
-            brownian_speed_threshold = array[0][5]
             brownian_linearity_threshold = array[0][6]
 
         else:

@@ -1,11 +1,22 @@
 #!/bin/fish
 
 # Writen for POSIX systems (not Windows)
+# Uses Fish (Friendly Interactive Shell) instead of Bash,
+# so make sure that's installed.
+# Debian: sudo apt-get install fish
+# Arch: sudo pacman -S fish
+
+# Multithreading is hardcoded into this
+# Runs ~5 threads at a time
 
 set SCRIPT ~/Programs/physicsScripts/filterer.py
 set ROOT /home/jorb/data/Glycerol\ Exports\ 7.24.23\ 6/Glycerol\ Exports\ 7.24.23
 
-# The naming schemes here are especially bad
+echo "Glycerol Density-Matching Analysis Script"
+echo "Jordan Dehmel, 2023"
+echo "jdehmel@outlook.com"
+
+rm -rf scatters/*
 
 date
 
@@ -86,6 +97,32 @@ $SCRIPT $ROOT/240\ um/Top\ Down\ 16\ V/top-50\ exports &
 $SCRIPT $ROOT/240\ um/Top\ Down\ 16\ V/top-25\ exports &
 $SCRIPT $ROOT/240\ um/Top\ Down\ 16\ V/top\ exports &
 wait
+
+echo "Transferring scatterplots for 120um 16V data"
+
+mkdir -p special/top_down/0khz
+mkdir -p special/top_down/1khz
+mkdir -p special/top_down/100khz
+
+mkdir -p special/bottom_up/0khz
+mkdir -p special/bottom_up/1khz
+mkdir -p special/bottom_up/100khz
+
+ls scatters | grep 120 | grep 16 | grep "Top" | grep _0khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/top_down/0khz ; end
+ls scatters | grep 120 | grep 16 | grep "Top"  | grep 1khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/top_down/1khz ; end
+ls scatters | grep 120 | grep 16 | grep "Top"  | grep 100khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/top_down/100khz ; end
+
+ls scatters | grep 120 | grep 16 | grep "Bottom" | grep _0khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/bottom_up/0khz ; end
+ls scatters | grep 120 | grep 16 | grep "Bottom"  | grep 1khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/bottom_up/1khz ; end
+ls scatters | grep 120 | grep 16 | grep "Bottom"  | grep 100khz > matches.txt
+for name in $(cat matches.txt); cp scatters/$name special/bottom_up/100khz ; end
+
+rm matches.txt
 
 echo "Done with layer 1 analysis."
 echo "Doing meta analysis..."
