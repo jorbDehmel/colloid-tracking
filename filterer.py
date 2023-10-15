@@ -227,8 +227,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             raise Exception('Overfiltering Error')
 
         # Do STD filtering if needed
-        if std_drop_flags is not None and len(std_drop_flags) == len(csv.columns):
-
+        if std_drop_flags is not None:
             # Collect STD's for the requested items
             std_values: [float] = [
                 std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
@@ -249,7 +248,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                         break
 
                     # Filter anything above, but ONLY if this is control
-                    elif speed_threshold == 0.0 and raw_list[i] > mean_values[i] + (2 * std_values[i]):
+                    elif speed_threshold == 0.0 and std_drop_flags[i] and raw_list[i] > mean_values[i] + (2 * std_values[i]):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -281,6 +280,13 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
                 for i in range(len(raw_list)):
                     if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
+                        dropped_row_indices.append(
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
+                        csv.drop(axis=0, inplace=True, labels=[row[0]])
+                        break
+
+                    # Filter anything above, but ONLY if this is control
+                    elif speed_threshold == 0.0 and iqr_drop_flags[i] and raw_list[i] > mean_values[i] + (1.5 * iqr_values[i]):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -325,7 +331,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         output_data[len(col_names) + 2] = output_data[5] * conversion
 
     # Output percent remaining
-    if initial_num_rows != final_num_rows:
+    if initial_num_rows != final_num_rows and not silent:
         print((name + ':')[-20:],
               'Filtered out', initial_num_rows -
               final_num_rows, 'tracks, leaving',
@@ -546,7 +552,9 @@ if __name__ == '__main__':
 
     # Use fallback patterns if needed
     if len(names) == 0:
-        print('Using fallback patterns; This could lead to picking up spots files instead of tracks.')
+        if not silent:
+            print(
+                'Using fallback patterns; This could lead to picking up spots files instead of tracks.')
 
         names: [str] = name_fixer.fix_names(fallback_patterns)
         has_control: bool = (names[0] is not None)
@@ -571,7 +579,8 @@ if __name__ == '__main__':
             try:
                 array[i], std_array[i] = do_file(folder + sep + name,
                                                  0.0, 0.0, 0.0,
-                                                 None, None)
+                                                 do_std_filter_flags,
+                                                 do_iqr_filter_flags)
             except:
                 print("ERROR DURING COLLECTION OF FILE", folder + sep + name)
                 array[i] = [None for i in range(len(array[i]))]
