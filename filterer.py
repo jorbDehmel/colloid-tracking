@@ -18,6 +18,16 @@ import name_fixer
 from reverser import graph_relative
 
 # What columns to keep from the .csv files
+'''
+Names which are not kept:
+['LABEL', 'TRACK_INDEX', 'TRACK_ID', 'NUMBER_SPOTS',
+'NUMBER_GAPS', 'NUMBER_SPLITS', 'NUMBER_MERGES', 'NUMBER_COMPLEX',
+'LONGEST_GAP', 'TRACK_DURATION', 'TRACK_START', 'TRACK_STOP',
+'TRACK_X_LOCATION', 'TRACK_Y_LOCATION', 'TRACK_Z_LOCATION',
+'TRACK_MAX_SPEED', 'TRACK_MIN_SPEED', 'TRACK_STD_SPEED',
+'MAX_DISTANCE_TRAVELED', 'CONFINEMENT_RATIO',
+'MEAN_DIRECTIONAL_CHANGE_RATE']
+'''
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
@@ -86,6 +96,11 @@ do_displacement_thresh: bool = False
 # Tends to not do much
 do_linearity_thresh: bool = False
 
+# For filtering tracks which are too short to be meaningful
+# since error is higher on shorter tracks
+do_duration_thresh: bool = True
+duration_threshold: int = 65
+
 # If not None, also save graphs here (w/ mangled prefix)
 secondary_save_path: str = '/home/jorb/data_graphs/'
 
@@ -117,6 +132,12 @@ filter_scatter_plots_data: [[[]]] = []
 save_num: int = 0
 
 
+'''
+todo:
+- add minimum number of frames
+'''
+
+
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
@@ -135,13 +156,17 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Drop useless data (columns)
     names_to_drop: [str] = []
     for column_name in csv.columns:
-        if column_name not in col_names:
+        if column_name not in col_names and column_name != 'TRACK_DURATION':
             names_to_drop.append(column_name)
 
     csv.drop(axis=1, inplace=True, labels=names_to_drop)
 
     # Ensure the columns are in the correct order (VITAL)
-    assert csv.columns.to_list() == col_names
+    i: int = 0
+    for item in csv.columns.to_list():
+        if item != 'TRACK_DURATION':
+            assert item == col_names[i]
+            i += 1
 
     # Drop useless data (rows)
     csv.drop(axis=0, inplace=True, labels=[0, 1, 2])
@@ -165,6 +190,33 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     backup = csv.copy(deep=True)
 
+    # Do duration thresh here
+    try:
+        backup = csv.copy(deep=True)
+
+        if do_duration_thresh:
+            for row in csv.iterrows():
+                # Must pass linearity threshold
+                if float(row[1]['TRACK_DURATION']) < duration_threshold:
+                    dropped_row_indices.append(
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DURATION_THRESHOLD'])
+                    csv.drop(axis=0, inplace=True, labels=[row[0]])
+                    continue
+
+        if csv.shape[0] == 0:
+            print('In file', name)
+            print('Error! No items exceeded duration thresholding.')
+            raise Exception('Overfiltering Error')
+
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    # Now drop duration, it's not needed anymore
+    csv.drop(axis=1, inplace=True, labels=['TRACK_DURATION'])
+    assert csv.columns.to_list() == col_names
+
     try:
         # Do thresholding here
         if do_speed_thresh:
@@ -181,6 +233,14 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('Error! No items exceeded brownian speed thresholding.')
             raise Exception('Overfiltering Error')
 
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    try:
+        backup = csv.copy(deep=True)
+
         if do_displacement_thresh:
             for row in csv.iterrows():
                 # Must also meet displacement threshold
@@ -195,6 +255,14 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('Error! No items exceeded brownian displacement thresholding.')
             raise Exception('Overfiltering Error')
 
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    try:
+        backup = csv.copy(deep=True)
+
         if do_linearity_thresh:
             for row in csv.iterrows():
                 # Must pass linearity threshold
@@ -208,6 +276,14 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('In file', name)
             print('Error! No items exceeded brownian linearity thresholding.')
             raise Exception('Overfiltering Error')
+
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    try:
+        backup = csv.copy(deep=True)
 
         if do_quality_percentile_filter:
             # Must pass quality threshold
@@ -225,6 +301,14 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('In file', name)
             print('Error! No items exceeded quality thresholding.')
             raise Exception('Overfiltering Error')
+
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    try:
+        backup = csv.copy(deep=True)
 
         # Do STD filtering if needed
         if std_drop_flags is not None:
@@ -259,6 +343,14 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print(
                 'Error! No items survived brownian thresholding and standard deviation filtering.')
             raise Exception('Overfiltering Error')
+
+    except Exception as e:
+        print(e)
+        print('SEVERE WARNING! Reverting')
+        csv = backup.copy(deep=True)
+
+    try:
+        backup = csv.copy(deep=True)
 
         # Do IQR filtering if needed
         if iqr_drop_flags is not None and len(iqr_drop_flags) == len(csv.columns):
@@ -297,9 +389,10 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print(
                 'Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
             raise Exception('Overfiltering Error')
+
     except Exception as e:
         print(e)
-        print('SEVERE WARNING! Reverting to input data!')
+        print('SEVERE WARNING! Reverting')
 
         csv = backup.copy(deep=True)
 
@@ -351,11 +444,10 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         plt.vlines([m - s, m, m + s], 0, 5, colors=['b'])
         plt.vlines([brownian_speed_threshold], 0, 10, colors=['black'])
 
-        lgd = plt.legend()
+        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
         plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
-        # plt.show()
 
         plt.close()
 
@@ -420,7 +512,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     c='r',
                     label='Lost')
 
-        lgd = plt.legend()
+        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
+            'Kept ' + str(csv.shape[0]) + ', Lost ' + str(len(dropped_row_indices))))
 
         plt.savefig(secondary_save_path + name.replace('/', '_') +
                     str(save_num) + '_track_scatter.png')
@@ -750,7 +843,8 @@ if __name__ == '__main__':
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-        plt.legend()
+        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
+            'Kept ' + str(len(only_kept_x)) + ', Lost ' + str(len(only_lost_x))))
 
         plt.savefig(secondary_save_path + '/' +
                     name_fixer.get_cwd() + '_filter_scatter.png')
