@@ -398,6 +398,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     del backup
 
+    csv.to_csv('/home/jorb/Programs/physicsScripts/' +
+               name.replace('/', '_') + '.filtered.csv')
+
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
 
