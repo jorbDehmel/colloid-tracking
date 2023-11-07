@@ -4,7 +4,7 @@ This repository contains code for the filtering of data surrounding the motion o
 
 This document outlines each of the included files, how to use them, and what they do. All code herein uses Python type hinting, which may be unfamiliar. If code modification is needed and this is unfamiliar, refer [here](https://docs.python.org/3/library/typing.html) (or contact me at jedehmel@mavs.coloradomesa.edu).
 
-These filters should be stable and Windows-compatible, but they have been testing on a machine running Arch Linux. If a bug is found, report it to jedehmel@mavs.coloradomesa.edu.
+These filters should be stable and Windows-compatible, but they have been tested on a machine running Arch Linux. If a bug is found, report it to jedehmel@mavs.coloradomesa.edu.
 
 Jordan Dehmel, 2023,
 jdehmel@outlook.com or
