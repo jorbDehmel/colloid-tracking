@@ -7,15 +7,38 @@ Jordan Dehmel, 2023
 jdehmel@outlook.com
 '''
 
-import pandas as pd
-from numpy import zeros, mean, std, percentile
-import matplotlib.pyplot as plt
-from os import *
-from sys import *
-from time import time
-import name_fixer
+'''
+From Dr. Boymelgreen
 
-from reverser import graph_relative
+For each height:
+
+Begin with Control ("0kHz")
+    Calculate Average and STDEV from raw data
+    Filter out any outliers that are greater than 2*STDEV
+        (for the Brownian, less than 2*STDEV will often be
+        negative I think)
+    Recalculate Average +STDEV from the filtered data 
+        (for reference, for top, I get average =0.014 and
+        Average+2*STDEV=0.0178) For bottom, I get 0.09 and 0.14
+        from the filtered data and 0.11 and 0.22 for the
+        unfiltered data (I am not sure what the extra filter is
+        between these two sets)
+
+To calculate the mobility under applied field
+    Filter out any data points that are less than
+        Brownian+2STDEV
+    Calculate AVERAGE+STDEV
+    Remove outliers that are greater than AVERAGE+2*STDEV or
+        less than AVERAGE-2*STDEV
+    Recalculate AVERAGE+STDEV - that will be the data point for
+        the frequency curve
+
+I noted that for the top 1khz, there was only 1 "outlier" in 3
+and in bottom 1kHz, there were none. I think that in general
+this should be true if the tracked data is good quality.
+
+'''
+
 
 # What columns to keep from the .csv files
 '''
@@ -28,6 +51,14 @@ Names which are not kept:
 'MAX_DISTANCE_TRAVELED', 'CONFINEMENT_RATIO',
 'MEAN_DIRECTIONAL_CHANGE_RATE']
 '''
+import pandas as pd
+from numpy import zeros, mean, std, percentile
+import matplotlib.pyplot as plt
+from os import *
+from sys import *
+from time import time
+import name_fixer
+from reverser import graph_relative
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
