@@ -97,12 +97,12 @@ def get_relative(data: [float], turning_point_index: int) -> [float]:
 
 # Like graph_multiple_relative,  but saves to .csv instead of .png
 def save_multiple_relative(data: [[float]],
-                            turning_points: [str],
-                            labels: [[str]],
-                            save_paths: [str],
-                            line_labels: [str],
-                            errors: [[float]] = None) -> None:
-    
+                           turning_points: [str],
+                           labels: [[str]],
+                           save_paths: [str],
+                           line_labels: [str],
+                           errors: [[float]] = None) -> None:
+
     # Create a complete list of all the labels
     # This keeps weird labels from being pushed to the end of the graph
     complete_labels: [str] = []
@@ -143,7 +143,7 @@ def save_multiple_relative(data: [[float]],
 
         relative_errors: [float] = errors[i][:turning_point_index] + \
             [0.0] + errors[i][turning_point_index:]
-        
+
         complete_data: [float] = []
         complete_errors: [float] = []
         for item in complete_labels:
@@ -165,11 +165,12 @@ def save_multiple_relative(data: [[float]],
         array[i] = complete_data + complete_errors + extra
 
     # Array to DF
-    columns: [str] = [str(f) + 'HZ_SLS' for f in complete_labels] + [str(f) + 'HZ_SLS_STD' for f in complete_labels] + extra_columns
+    columns: [str] = [str(f) + 'HZ_SLS' for f in complete_labels] + \
+        [str(f) + 'HZ_SLS_STD' for f in complete_labels] + extra_columns
     frame: pd.DataFrame = pd.DataFrame(array,
                                        index=line_labels,
                                        columns=columns)
-    
+
     for path in save_paths:
         frame.to_csv(path)
 
@@ -250,8 +251,8 @@ def graph_multiple_relative(data: [[float]],
 
         if relative_errors is not None:
             plt.errorbar(relative_labels, relative_data,
-                     relative_errors, color=colors[i % len(colors)],
-                     capsize=5, alpha=0.5)
+                         relative_errors, color=colors[i % len(colors)],
+                         capsize=5, alpha=0.5)
 
         plt.plot(relative_labels,
                  relative_data,
@@ -369,7 +370,7 @@ def graph_relative(data_in: [float],
 
     # Find location of turning_point_label
     i: int = 0
-    while i < len(labels) and float(labels[i + 1]) <= float(turning_point_label):
+    while i + 1 < len(labels) and float(labels[i + 1]) <= float(turning_point_label):
         i += 1
 
     real_data: [float] = get_relative(data_in, i)
@@ -393,5 +394,65 @@ def graph_relative(data_in: [float],
 
     if do_save:
         plt.savefig(save_path)
+
+    return
+
+
+def display_kept_lost_scatterplot(pre: pd.DataFrame, post: pd.DataFrame, name: str,
+                                  brownian_speed_threshold: float = None) -> None:
+    '''
+    :param pre: The full Pandas DataFrame before any filtering
+    :param post: The output Pandas DataFrame after all filtering
+    :param name: The input filename
+    :return: None
+    '''
+
+    pass
+
+
+def display_kept_lost_histogram(pre: pd.DataFrame, post: pd.DataFrame, name: str,
+                                brownian_speed_threshold: float = None) -> None:
+    '''
+    Create, show, and save a histogram comparing the pre- and
+    post-filtering data.
+    :param pre: The full Pandas DataFrame before any filtering
+    :param post: The output Pandas DataFrame after all filtering
+    :param name: The input filename
+    :return: None
+    '''
+
+    # Before
+    plt.clf()
+    plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+              for row in pre.iterrows()], bins=30, color='r', label='PRE')
+
+    m = np.mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in pre.iterrows()])
+    s = np.std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                for row in pre.iterrows()])
+    plt.hlines([m - s, m, m + s], 0, 5, colors=['r'])
+
+    # After
+    plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+              for row in post.iterrows()], bins=30, alpha=0.5, color='b', label='POST')
+    plt.title('Pre V. Post Filter SLS w/ Means\n' + name)
+
+    m = np.mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                 for row in post.iterrows()])
+    s = np.std([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                for row in post.iterrows()])
+    plt.vlines([m - s, m, m + s], 0, 5, colors=['b'])
+
+    if brownian_speed_threshold is not None:
+        plt.vlines([brownian_speed_threshold], 0, 10, colors=['black'])
+
+    lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
+
+    plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + '.png',
+                bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+    plt.show()
+
+    plt.close()
 
     return

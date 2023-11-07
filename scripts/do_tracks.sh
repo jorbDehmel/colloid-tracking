@@ -26,4 +26,4 @@ echo "Stage 3 / 4"
 
 echo "Stage 4 / 4 : Meta"
 
-~/Programs/physicsScripts/tracks_meta.py
+~/Programs/physicsScripts/legacy/tracks_meta.py

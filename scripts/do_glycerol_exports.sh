@@ -138,7 +138,7 @@ rm matches.txt
 echo "Done with layer 1 analysis."
 echo "Doing meta analysis..."
 
-~/Programs/physicsScripts/meta_glycerol.py
+~/Programs/physicsScripts/legacy/meta_glycerol.py
 
 echo "Done."
 

@@ -1,6 +1,10 @@
 # Overview of Filters For Colloid Motion
 Jordan Dehmel, 2023, jdehmel@outlook.com
 
+This file overviews an early view of the filters contained
+herein. It is not maintained, as is likely to be obsolete. For
+a better readme, use project_overview.
+
 ## Itemized Filtering Process
 
 1) Read in raw input data

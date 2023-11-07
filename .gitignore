@@ -1,5 +1,7 @@
 special/
 __pycache__/
+filtering/
+scatters/
 .vscode/
 test*/
 perm/

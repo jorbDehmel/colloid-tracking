@@ -1,14 +1,118 @@
 #!/usr/bin/python3
 
+# Import needed packages
+import pandas as pd
+from numpy import zeros, mean, std, percentile
+import matplotlib.pyplot as plt
+from os import *
+from sys import *
+from time import time
+import name_fixer
+from reverser import graph_relative
+
 '''
 Main particle filtering utilities
 
+This file is what you will use if you want "fancier" filtering
+and utilities, like error handling and automatic file detection
+given a folder.
+
 Jordan Dehmel, 2023
 jdehmel@outlook.com
+jedehmel@mavs.coloradomesa.edu
 '''
 
+##########################################################################################################
+# Begin settings
+# See docs/project_overview.pdf for a thorough explanation of each of these.
+##########################################################################################################
+
+
+# Put the folder you want to operate on into this string
+folder: str = ''
+
 '''
-From Dr. Boymelgreen
+# Refer to this list when modifying do_std_filter_flags
+# or do_iqr_filter_flags
+
+col_names = ['TRACK_DISPLACEMENT',
+             'TRACK_MEAN_SPEED',
+             'TRACK_MEDIAN_SPEED',
+             'TRACK_MEAN_QUALITY',
+             'TOTAL_DISTANCE_TRAVELED',
+             'MEAN_STRAIGHT_LINE_SPEED',
+             'LINEARITY_OF_FORWARD_PROGRESSION']
+'''
+
+# Flags for which -2 * STD filters to apply
+# A False in the first position means it will not apply STD filters
+# to the first item in col_names, in this case 'TRACK_DISPLACEMENT'.
+# If it were True instead, it will do that filtering.
+do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
+
+# Flags for which -1.5 * IQR filters to apply
+# This works just like above. If it is equal to None, it does none
+# of these filters
+do_iqr_filter_flags: [bool] = None
+
+# If true, filters any particles whose quality (as measured by
+# imagej) is below the given percentile
+do_quality_percentile_filter: bool = False
+quality_percentile_filter: float = 50.0
+
+# Conversion from pixels/frame to um/s
+conversion: float = 4 * 0.32
+
+# Tends to work well
+# Activates the brownian straight-line-speed threshold filter
+# If active, removes any particle below Brownian mean
+# straight-line-speed
+do_speed_thresh: bool = True
+
+# Determines how many standard deviations a particle must be
+# above the Brownian mean in order to survive Brownian mean
+# straight line speed thresholding (activated above)
+brownian_multiplier: float = 2.0
+
+# Just like do_speed_thresh, but for the displacement
+do_displacement_thresh: bool = False
+
+# Just like do_speed_thresh, but for the particle linearity
+# (as measured by imagej)
+do_linearity_thresh: bool = False
+
+# For filtering tracks which are too short to be meaningful
+# since error is higher on shorter tracks
+# If active, filters out any tracks w/ less than duration_threshold
+# frames.
+do_duration_thresh: bool = True
+duration_threshold: int = 65
+
+# If not None, also save graphs and .csv files here
+secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
+
+# If true, will only print warnings and errors
+silent: bool = True
+
+# If true, uses the given brownian speed fallback when no
+# brownian file can be detected. This should not be an issue,
+# so long as the regular expressions match the Brownian file.
+do_speed_thresh_fallback: bool = False
+brownian_speed_threshold_fallback: float = 0.042114570268546765
+
+# Turns on or off extra graphs
+do_filter_scatter_plots: bool = True
+do_extra_filter_scatter_plots: bool = True
+
+# If true, saves a histogram of filtered datapoints for each file
+save_filtering_data: bool = False
+
+##########################################################################################################
+# End settings
+##########################################################################################################
+
+'''
+Protocol overview from Dr. Boymelgreen
 
 For each height:
 
@@ -39,10 +143,8 @@ this should be true if the tracked data is good quality.
 
 '''
 
-
-# What columns to keep from the .csv files
 '''
-Names which are not kept:
+Names which are not kept from the original .csv files:
 ['LABEL', 'TRACK_INDEX', 'TRACK_ID', 'NUMBER_SPOTS',
 'NUMBER_GAPS', 'NUMBER_SPLITS', 'NUMBER_MERGES', 'NUMBER_COMPLEX',
 'LONGEST_GAP', 'TRACK_DURATION', 'TRACK_START', 'TRACK_STOP',
@@ -51,14 +153,11 @@ Names which are not kept:
 'MAX_DISTANCE_TRAVELED', 'CONFINEMENT_RATIO',
 'MEAN_DIRECTIONAL_CHANGE_RATE']
 '''
-import pandas as pd
-from numpy import zeros, mean, std, percentile
-import matplotlib.pyplot as plt
-from os import *
-from sys import *
-from time import time
-import name_fixer
-from reverser import graph_relative
+
+# Everything beyond this point should not be changed unless it
+# is for a bug fix.
+
+# Column names which will be kept from the original .csv file
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
                     'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
@@ -69,19 +168,19 @@ extra_columns: [str] = ['INITIAL_TRACK_COUNT',
                         'FILTERED_TRACK_COUNT',
                         'STRAIGHT_LINE_SPEED_UM_PER_S']
 
-# Flags for which -2 * STD filters to apply
-# do_std_filter_flags: [bool] = [False, False, False, True, False, True, True]
-# do_std_filter_flags: [bool] = [True, True, True, True, True, True, True]
-do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
+# These are internally used; Do not change
+brownian_speed_threshold: float = 0.0
+brownian_displacement_threshold: float = 0.0
+brownian_linearity_threshold: float = 0.0
 
-# Flags for which -1.5 * IQR filters to apply
-do_iqr_filter_flags: [bool] = None
-# do_iqr_filter_flags: [bool] = [False, False, False, False, False, True, False]
-# do_iqr_filter_flags: [bool] = [True, True, True, True, True, True, True]
+# These are for internal use, do not change
+filter_scatter_plots_data: [[[]]] = []
+save_num: int = 0
 
-do_quality_percentile_filter: bool = False
-quality_percentile_filter: float = 50.0
-
+# These are regular expressions that power the automatic folder
+# thing. Any naming scheme which matches these regular expressions
+# is valid. If the naming scheme does not match, it is not detectable
+# by this program.
 patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
                    '(1 ?khz.*track|t1 ?khz)',
@@ -95,6 +194,7 @@ patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '(200 ?khz.*track|t200 ?khz)',
                    '(300 ?khz.*track|t300 ?khz)']
 
+# If the above patterns cannot be matches, it will attempt these.
 fallback_patterns: [str] = ['((?<![0-9])0 ?khz|control)',
                             '(0.8 ?khz|800 ?hz)',
                             '1 ?khz',
@@ -108,71 +208,22 @@ fallback_patterns: [str] = ['((?<![0-9])0 ?khz|control)',
                             '200 ?khz',
                             '300 ?khz']
 
-# The folder to operate on. Will be replaced by the cwd if ''
-folder: str = ''
-
-# Conversion from pixels/frame to um/s
-conversion: float = 4 * 0.32
-
-# Tends to work well
-do_speed_thresh: bool = True
-
-# When do_speed_thresh, any tracks w/ SLS <= brownian + brownian_multiplier * brownian_std
-# will be dropped
-brownian_multiplier: float = 2.0
-
-# Tends to work well
-do_displacement_thresh: bool = False
-
-# Tends to not do much
-do_linearity_thresh: bool = False
-
-# For filtering tracks which are too short to be meaningful
-# since error is higher on shorter tracks
-do_duration_thresh: bool = True
-duration_threshold: int = 65
-
-# If not None, also save graphs here (w/ mangled prefix)
-secondary_save_path: str = '/home/jorb/data_graphs/'
-
-# If true, will only print warnings and errors
-silent: bool = True
-
-brownian_speed_threshold: float = 0.0
-brownian_displacement_threshold: float = 0.0
-brownian_linearity_threshold: float = 0.0
-
-do_speed_thresh_fallback: bool = False
-brownian_speed_threshold_fallback: float = 0.042114570268546765
-
-
-do_filter_scatter_plots: bool = True
-do_extra_filter_scatter_plots: bool = False
-filter_scatter_plots_data: [[[]]] = []
-
-
-# Analyze a file with a given name, and return the results
-# If speed_threshold is nonzero, any track with less speed will
-# be filtered out. This is similar for the linearity and displacement
-# thresholds. The std_drop_flags and iqr_drop_flags lists are
-# arrays of booleans. If the ith item is True, that column
-# will be filtered such that only items which remain are those
-# which are above 2 STD/IQR below the mean for their column.
-# Returns a duple containing the output data followed by
-# the standard deviations.
-save_num: int = 0
-
-
-'''
-todo:
-- add minimum number of frames
-'''
-
 
 def do_file(name: str, displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
             std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
-            return_label: bool = False, save_filtering_data: bool = False) -> ([float], [float]):
+            return_label: bool = False) -> ([float], [float]):
+    '''
+    Analyze a file with a given name, and return the results
+    If speed_threshold is nonzero, any track with less speed will
+    be filtered out. This is similar for the linearity and displacement
+    thresholds. The std_drop_flags and iqr_drop_flags lists are
+    arrays of booleans. If the ith item is True, that column
+    will be filtered such that only items which remain are those
+    which are above 2 STD/IQR below the mean for their column.
+    Returns a duple containing the output data followed by
+    the standard deviations.
+    '''
 
     global save_num, secondary_save_path
     save_num += 1
@@ -429,8 +480,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     del backup
 
-    csv.to_csv('/home/jorb/Programs/physicsScripts/' +
-               name.replace('/', '_') + '.filtered.csv')
+    csv.to_csv(name.replace('/', '_') + '.filtered.csv')
 
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
@@ -480,15 +530,18 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
         lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
-        plt.savefig('/home/jorb/Programs/physicsScripts/filtering/' + name.replace('/', '_') + str(save_num) + '.png',
+        plt.savefig(name.replace('/', '_') + str(save_num) + '.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+        if secondary_save_path is not None:
+            plt.savefig(secondary_save_path + '/' + name.replace('/', '_') + str(save_num) + '.png',
+                        bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
 
         dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=[
                                              'CSV_TRACK_ROW_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'REASON'])
-        dropped.to_csv('/home/jorb/Programs/physicsScripts/filtering/' +
-                       name.replace('/', '_') + str(save_num) + '.csv')
+        dropped.to_csv(name.replace('/', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
     if do_filter_scatter_plots:
@@ -549,9 +602,10 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
             'Kept ' + str(csv.shape[0]) + ', Lost ' + str(len(dropped_row_indices))))
 
-        plt.savefig(secondary_save_path + name.replace('/', '_') +
-                    str(save_num) + '_track_scatter.png')
-        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' + name.replace('/', '_') + str(save_num) + '_track_scatter.png',
+        if secondary_save_path is not None:
+            plt.savefig(secondary_save_path + '/' + name.replace('/', '_') +
+                        str(save_num) + '_track_scatter.png')
+        plt.savefig(name.replace('/', '_') + str(save_num) + '_track_scatter.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
@@ -648,12 +702,14 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     plt.savefig(file_name)
 
     if secondary_save_path is not None:
-        plt.savefig(secondary_save_path +
+        plt.savefig(secondary_save_path + '/' +
                     name_fixer.get_cwd() + '_' + file_name)
 
     return True
 
 
+# This is what will be executed when the script is run;
+# Everything above here is just meta stuff.
 if __name__ == '__main__':
     if folder == '' or folder is None:
         if len(argv) != 1:
@@ -768,18 +824,18 @@ if __name__ == '__main__':
     std_csv.to_csv('track_data_summary_stds.csv')
 
     if secondary_save_path is not None:
-        out_csv.to_csv(secondary_save_path +
+        out_csv.to_csv(secondary_save_path + '/' +
                        name_fixer.get_cwd() + 'track_data_summary.csv')
-        std_csv.to_csv(secondary_save_path +
+        std_csv.to_csv(secondary_save_path + '/' +
                        name_fixer.get_cwd() + 'track_data_summary_stds.csv')
 
-    if not silent:
-        print('Generating graphs...')
+    # if not silent:
+    #     print('Generating graphs...')
 
-    for column_name in col_names:
-        graph_column_with_bars(
-            out_csv, std_csv, column_name, column_name + '_STD',
-            has_control=has_control)
+    # for column_name in col_names:
+    #     graph_column_with_bars(
+    #         out_csv, std_csv, column_name, column_name + '_STD',
+    #         has_control=has_control)
 
     plt.clf()
     plt.rc('font', size=6)
@@ -791,24 +847,27 @@ if __name__ == '__main__':
     plt.plot(out_csv['FILTERED_TRACK_COUNT'])
 
     plt.savefig('TRACK_COUNT.png')
+    if secondary_save_path is not None:
+        plt.savefig(secondary_save_path + '/TRACK_COUNT.png')
+
     plt.close()
 
-    graph_relative(
-        out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
-        '10000.0',
-        floated_names,
-        'MEAN_STRAIGHT_LINE_SPEED',
-        'RELATIVE_SLS.png',
-        ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
+    # graph_relative(
+    #     out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
+    #     '10000.0',
+    #     floated_names,
+    #     'MEAN_STRAIGHT_LINE_SPEED',
+    #     'RELATIVE_SLS.png',
+    #     ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
-    if secondary_save_path is not None:
-        graph_relative(
-            out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
-            '10000.0',
-            floated_names,
-            'MEAN_STRAIGHT_LINE_SPEED',
-            secondary_save_path + name_fixer.get_cwd() + '_RELATIVE_SLS.png',
-            ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
+    # if secondary_save_path is not None:
+    #     graph_relative(
+    #         out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
+    #         '10000.0',
+    #         floated_names,
+    #         'MEAN_STRAIGHT_LINE_SPEED',
+    #         secondary_save_path + '/' + name_fixer.get_cwd() + '_RELATIVE_SLS.png',
+    #         ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if do_filter_scatter_plots:
         everything_labels: [str] = [
@@ -843,8 +902,9 @@ if __name__ == '__main__':
         everything.sort(key=lambda i: float(i[0]) * 1000 + float(i[1]))
 
         csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
-        csv.to_csv(secondary_save_path + '/all_tracks.csv')
-        csv.to_csv('/home/jorb/Programs/physicsScripts/all_tracks.csv')
+        if secondary_save_path is not None:
+            csv.to_csv(secondary_save_path + '/all_tracks.csv')
+        csv.to_csv('all_tracks.csv')
 
         floated_names.sort(key=lambda x: float(x))
 
@@ -880,10 +940,10 @@ if __name__ == '__main__':
         lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
             'Kept ' + str(len(only_kept_x)) + ', Lost ' + str(len(only_lost_x))))
 
-        plt.savefig(secondary_save_path + '/' +
-                    name_fixer.get_cwd() + '_filter_scatter.png')
-        plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
-                    name_fixer.get_cwd() + '_filter_scatter.png')
+        if secondary_save_path is not None:
+            plt.savefig(secondary_save_path + '/' +
+                        name_fixer.get_cwd() + '_filter_scatter.png')
+        plt.savefig(name_fixer.get_cwd() + '_filter_scatter.png')
 
         plt.close()
 
@@ -901,10 +961,10 @@ if __name__ == '__main__':
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-            plt.savefig(secondary_save_path + '/' +
-                        name_fixer.get_cwd() + '_filtered_scatter.png')
-            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
-                        name_fixer.get_cwd() + '_filtered_scatter.png')
+            if secondary_save_path is not None:
+                plt.savefig(secondary_save_path + '/' +
+                            name_fixer.get_cwd() + '_filtered_scatter.png')
+            plt.savefig(name_fixer.get_cwd() + '_filtered_scatter.png')
 
             plt.close()
 
@@ -921,10 +981,10 @@ if __name__ == '__main__':
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-            plt.savefig(secondary_save_path + '/' +
-                        name_fixer.get_cwd() + '_lost_scatter.png')
-            plt.savefig('/home/jorb/Programs/physicsScripts/scatters/' +
-                        name_fixer.get_cwd() + '_lost_scatter.png')
+            if secondary_save_path is not None:
+                plt.savefig(secondary_save_path + '/' +
+                            name_fixer.get_cwd() + '_lost_scatter.png')
+            plt.savefig(name_fixer.get_cwd() + '_lost_scatter.png')
 
             plt.close()
 

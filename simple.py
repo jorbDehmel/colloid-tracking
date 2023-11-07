@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import sys
 import os
+import reverser
 
 from typing import *
 
@@ -103,6 +104,9 @@ def filter_single_file(filepath: str, is_brownian: bool,
     # Drop labels
     file.drop(axis=0, inplace=True, labels=[0, 1, 2])
 
+    # Make backup for latter scatterplotting
+    file_backup: pd.DataFrame = file.copy(deep=True)
+
     speeds: [float] = file[to_capture].astype(float).to_list()
     initial_num_rows: int = len(speeds)
 
@@ -148,6 +152,9 @@ def filter_single_file(filepath: str, is_brownian: bool,
     speeds = file[to_capture].astype(float).to_list()
     filtered_mean: float = np.mean(speeds)
     filtered_std: float = np.std(speeds)
+
+    # Create scatterplot
+    reverser.display_kept_lost_scatterplot(file_backup, file, filepath)
 
     # Return values as designated above
     return (file, initial_num_rows - num_rows_dropped, num_rows_dropped, filtered_mean, filtered_std)

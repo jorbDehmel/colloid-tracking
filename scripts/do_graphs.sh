@@ -26,7 +26,7 @@ echo 'Stage 3 / 5 done.'
 
 echo 'Stage 4 / 5 done.'
 
-~/Programs/physicsScripts/meta.py
-~/Programs/physicsScripts/meta_2.py
+~/Programs/physicsScripts/legacy/meta.py
+~/Programs/physicsScripts/legacy/meta_2.py
 
 echo 'Stage 5 / 5 done.'
