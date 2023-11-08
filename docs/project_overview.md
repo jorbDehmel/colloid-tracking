@@ -52,6 +52,44 @@ This is the more complicated version of `simple.py`. This program has many more 
 
 **If there are issues with the automatic detection of files, it is likely that the naming scheme used does not match the existing Regular Expressions. If it is only a few files, you can change the naming scheme. However, if it is many files, the expressions should be modified, and you should contact jedehmel@mavs.coloradomesa.edu or someone else who knows RegEx.**
 
+### Process
+
+For a single file:
+
+Initialization:
+- Load file from .csv
+- Drop Items which are not of use to us
+
+Filtering:
+- Do duration threshold
+- Do Brownian mean straight line speed threshold
+- Do Brownian displacement threshold
+- Do Brownian linearity threshold
+- Do quality threshold
+- Do Standard Deviation filtering
+- Do IQR filtering
+
+Output:
+- Calculate mean and standard deviation from remaining
+- Output graphs for this file
+- Yield data
+
+**Warning: If, after a given filter is applied, no tracks remain, that filter will be discarded and the data reverted to before that filter.**
+
+For a group of files:
+
+Initialization:
+- Load desired folder
+- Find files within folder which match the frequency Regular Expressions
+
+Iteration:
+- Load Brownian file (with ONLY internal filtering)
+- Load non-Brownian files (with Brownian and internal filtering)
+
+Reconstruction:
+- Save graphs
+- Save .csv file(s)
+
 ## `name_fixer.py`
 
 This file contains only utilities for automatic name detection via Regular Expressions. This is what allows the other programs to work. You should not need to do anything with this file.
