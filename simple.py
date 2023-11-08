@@ -184,10 +184,43 @@ if __name__ == '__main__':
         print(
             f'Kept {rows_kept[i]} of {rows_kept[i] + rows_dropped[i]} on file {filepath}')
 
-    print(means)
-    print(standard_deviations)
-    print(frequencies)
-
     display_means(means, standard_deviations, frequencies)
 
+    # Construct minimal .csv output file, for simplicities sake
+    # A thorough output file can be generated via filterer.py
+
+    '''
+    Output .csv formatting:
+    FILEPATH,FREQUENCY,MEAN_STRAIGHT_LINE_SPEED,STRAIGHT_LINE_SPEED_STD,INITIAL_TRACK_COUNT,FILTERED_TRACK_COUNT,
+    '''
+
+    headers: [str] = ['FILEPATH',
+                      'FREQUENCY',
+                      'MEAN_STRAIGHT_LINE_SPEED',
+                      'STRAIGHT_LINE_SPEED_STD',
+                      'INITIAL_TRACK_COUNT',
+                      'FILTERED_TRACK_COUNT']
+
+    # Build raw python array
+    array: [[Union[str, float, int]]] = []
+    for i in range(len(filepaths)):
+        # Initialize row
+        row: [Union[str, float, int]] = [0.0 for _ in headers]
+
+        # Build row
+        row[0] = filepaths[i]
+        row[1] = frequencies[i]
+        row[2] = means[i]
+        row[3] = standard_deviations[i]
+        row[4] = rows_kept[i] + rows_dropped[i]
+        row[5] = rows_kept[i]
+
+        # Append a copy of the row to the array
+        array.append(row[:])
+
+    # Turn raw python array into DataFrame and save as .csv file
+    csv: pd.DataFrame = pd.DataFrame(data=array, columns=headers)
+    csv.to_csv('file_summary.csv')
+
+    # Exit program without error
     exit(0)
