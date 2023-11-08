@@ -184,7 +184,7 @@ if __name__ == '__main__':
         print(
             f'Kept {rows_kept[i]} of {rows_kept[i] + rows_dropped[i]} on file {filepath}')
 
-    display_means(means, standard_deviations, frequencies)
+    # display_means(means, standard_deviations, frequencies)
 
     # Construct minimal .csv output file, for simplicities sake
     # A thorough output file can be generated via filterer.py

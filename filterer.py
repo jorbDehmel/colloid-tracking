@@ -29,7 +29,7 @@ jedehmel@mavs.coloradomesa.edu
 
 
 # Put the folder you want to operate on into this string
-folder: str = ''
+folder: str = '/home/jorb/data/Report/Top'
 
 '''
 # Refer to this list when modifying do_std_filter_flags
@@ -718,10 +718,13 @@ if __name__ == '__main__':
 
             chdir(argv[1])
 
-        if not silent:
-            print('Getting current folder...')
+    else:
+        chdir(folder)
 
-        folder = getcwd()
+    if not silent:
+        print('Getting current folder...')
+
+    folder = getcwd()
 
     if not silent:
         print('Analyzing input data at', folder)
