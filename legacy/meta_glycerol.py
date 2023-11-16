@@ -10,11 +10,14 @@ jdehmel@outlook.com
 '''
 
 import os
+import sys
 import re
 import numpy as np
 import pandas as pd
 from typing import *
 from matplotlib import pyplot as plt
+
+sys.path.insert(0, '/home/jorb/Programs/physicsScripts')
 
 import name_fixer
 import reverser
@@ -46,6 +49,7 @@ For a given frequency, voltage, and size, graph all z-positions
 on one graph
 '''
 
+skip_permutations: bool = True
 file_location: str = '/home/jorb/data_graphs'
 
 # These filters are arranged in hierarchical order
@@ -54,7 +58,8 @@ main_folder_filter: str = ''
 size_filters: [str] = ['120[_ ]?um', '240[_ ]?um']
 directional_filters: [str] = ['[Tt]op[_ ]?[Dd]own', '[Bb]ottom[_ ]?[Uu]p']
 
-voltage_filters: [str] = ['8[_ ][vV]', '12[_ ][vV]', '16[_ ][vV]', '20[_ ][vV]']
+voltage_filters: [str] = ['8[_ ][vV]',
+                          '12[_ ][vV]', '16[_ ][vV]', '20[_ ][vV]']
 z_position_filters: [str] = ['8940', '8960', '8965', '8990', '8980',
                              '8985', '9010', '9015', '9035', '9040',
                              '9060', '9080', '9090', '9115', '9140',
@@ -82,7 +87,7 @@ silent: bool = True
 # Loads a list of lists of filters, and creates permutations of them.
 # Returns a list of tuples. Each item is (name, matched_filter_set, data_file, std_file)
 def load_all_filter_permutations(hierarchy: [[str]], current_filters: [str] = []) -> List[Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame]]:
-    
+
     if len(hierarchy) == 0:
         # Recursive base case
         name_array: [str] = name_fixer.find_all(current_filters[0])
@@ -95,16 +100,19 @@ def load_all_filter_permutations(hierarchy: [[str]], current_filters: [str] = []
             if len(name_array) == 0:
                 break
 
-        name_array = [name for name in name_array if re.search(final_file_qualifier, name) is not None]
+        name_array = [name for name in name_array if re.search(
+            final_file_qualifier, name) is not None]
 
         # Build list of tuples
         out: List[Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame]] = []
 
         for name in name_array:
             data_file: pd.DataFrame = pd.read_csv(name)
-            std_file: pd.DataFrame = pd.read_csv(name.replace('.csv', '_stds.csv'))
+            std_file: pd.DataFrame = pd.read_csv(
+                name.replace('.csv', '_stds.csv'))
 
-            to_append: Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame] = (name, name.replace('.csv', '_stds.csv'), current_filters[:], data_file, std_file)
+            to_append: Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame] = (
+                name, name.replace('.csv', '_stds.csv'), current_filters[:], data_file, std_file)
             out.append(to_append)
 
         return out
@@ -113,11 +121,12 @@ def load_all_filter_permutations(hierarchy: [[str]], current_filters: [str] = []
         out: List[Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame]] = []
 
         for filter in hierarchy[0]:
-            result = load_all_filter_permutations(hierarchy[1:], current_filters + [filter])
-            
+            result = load_all_filter_permutations(
+                hierarchy[1:], current_filters + [filter])
+
             for item in result:
                 out.append(item)
-        
+
         return out
 
 
@@ -148,8 +157,9 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
     global save_number
 
     # Scrape all items in data which match the specified filters
-    items_which_match: List[Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame]] = []
-    
+    items_which_match: List[Tuple[str, str,
+                                  List[str], pd.DataFrame, pd.DataFrame]] = []
+
     for item in data:
         did_match: bool = True
 
@@ -171,8 +181,10 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
     ordered_errors: [[float]] = []
     ordered_line_labels: [str] = []
 
-    subtitle: str = 'From filter set: ' + str(filters) + '\nPlus or minus 1 STD. Points without bars are interpolated.'
-    axis_labels: Tuple[str, str] = ('Applied Frequency (Hz)', 'Mean Straight Line Speed (Pixels Per Frame)')
+    subtitle: str = 'From filter set: ' + \
+        str(filters) + '\nPlus or minus 1 STD. Points without bars are interpolated.'
+    axis_labels: Tuple[str, str] = (
+        'Applied Frequency (Hz)', 'Mean Straight Line Speed (Pixels Per Frame)')
     save_paths: [str] = [path + str(save_number) + '.png' for path in where]
     save_number += 1
 
@@ -189,10 +201,12 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
         # item[2] is filters which found it
 
         # item[3] is data
-        ordered_data.append([row[1]['MEAN_STRAIGHT_LINE_SPEED'] for row in item[3].iterrows()])
+        ordered_data.append([row[1]['MEAN_STRAIGHT_LINE_SPEED']
+                            for row in item[3].iterrows()])
 
         # item[4] is errors
-        ordered_errors.append([row[1]['MEAN_STRAIGHT_LINE_SPEED_STD'] for row in item[4].iterrows()])
+        ordered_errors.append([row[1]['MEAN_STRAIGHT_LINE_SPEED_STD']
+                              for row in item[4].iterrows()])
 
         # Attempt turning point lookup
         # If cannot be found, default to 12khz5
@@ -207,7 +221,8 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
 
         else:
             if not silent:
-                print('Warning! Crossover frequency could not be found. Falling back on 25khz5.')
+                print(
+                    'Warning! Crossover frequency could not be found. Falling back on 25khz5.')
             ordered_turning_points.append('25500.0')
 
         # Scrape frequencies, not necessarily including turning point
@@ -225,12 +240,12 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
         if float(current_frequencies[0]) == 0.0:
             brownian_values.append(ordered_data[-1][0])
             brownian_stds.append(ordered_errors[-1][0])
-            
+
         elif len(brownian_values) != 0 and len(brownian_stds) != 0:
             ordered_data[-1] = [np.mean(brownian_values)] + ordered_data[-1]
             ordered_errors[-1] = [np.max(brownian_stds)] + ordered_errors[-1]
             ordered_frequencies[-1] = ['0.0'] + ordered_frequencies[-1]
-        
+
         else:
             if not silent:
                 print('Warning! No Brownian value found or previously found.')
@@ -300,12 +315,15 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
         real_rows_std: [] = [thing for thing in item[4].iterrows()]
 
         for i in range(len(real_rows_data)):
-            assert float(real_rows_data[i][1][0]) == float(real_rows_std[i][1][0])
+            assert float(real_rows_data[i][1][0]) == float(
+                real_rows_std[i][1][0])
 
             if str(real_rows_data[i][1][0]) in frequency_bins:
-                frequency_bins[str(real_rows_data[i][1][0])].append((item[0], real_rows_data[i][1]['MEAN_STRAIGHT_LINE_SPEED'], real_rows_std[i][1]['MEAN_STRAIGHT_LINE_SPEED_STD']))
+                frequency_bins[str(real_rows_data[i][1][0])].append(
+                    (item[0], real_rows_data[i][1]['MEAN_STRAIGHT_LINE_SPEED'], real_rows_std[i][1]['MEAN_STRAIGHT_LINE_SPEED_STD']))
             else:
-                frequency_bins[str(real_rows_data[i][1][0])] = [(item[0], real_rows_data[i][1]['MEAN_STRAIGHT_LINE_SPEED'], real_rows_std[i][1]['MEAN_STRAIGHT_LINE_SPEED_STD'])]
+                frequency_bins[str(real_rows_data[i][1][0])] = [(
+                    item[0], real_rows_data[i][1]['MEAN_STRAIGHT_LINE_SPEED'], real_rows_std[i][1]['MEAN_STRAIGHT_LINE_SPEED_STD'])]
 
     # Iterate over bins
     #       If len(bin) > 1:
@@ -326,21 +344,24 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
 
             # Build into data frame from array
             csv: pd.DataFrame = pd.DataFrame(array,
-                                             index=[t[0] for t in frequency_bins[key]],
+                                             index=[t[0]
+                                                    for t in frequency_bins[key]],
                                              columns=['MEAN_STRAIGHT_LINE_SPEED', 'MEAN_STRAIGHT_LINE_SPEED_STD'])
 
             # Save csv
-            save_paths = [path + str(save_number - 1) + '_by_z' for path in where]
+            save_paths = [path + str(save_number - 1) +
+                          '_by_z' for path in where]
             for path in save_paths:
                 csv.to_csv(path + str(key) + '.csv')
 
             # Graph bin using labels
             # Each tuple should be one point
             # There should be one line on each graph
-            
+
             # Sort depth labels
-            frequency_bins[key].sort(key=lambda w: z_pos_filter_to_float([r for r in z_position_filters if r in w[0]][0]))
-            
+            frequency_bins[key].sort(key=lambda w: z_pos_filter_to_float(
+                [r for r in z_position_filters if r in w[0]][0]))
+
             labels: [str] = [i[0] for i in frequency_bins[key]]
 
             for j, l in enumerate(labels):
@@ -358,19 +379,22 @@ def graph_all_from_filter_list_and_dfs(filters: [str],
             plt.rc('font', size=8)
             plt.figure(figsize=(10, 10), dpi=200)
 
-            plt.title('Mean Straight Line Speed by Depth\nPlus or Minus 1 Standard Deviation\n' + str(filters) + ' ' + str(key) + 'hz')
+            plt.title('Mean Straight Line Speed by Depth\nPlus or Minus 1 Standard Deviation\n' +
+                      str(filters) + ' ' + str(key) + 'hz')
             plt.xlabel('Z-Position')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
             plt.plot(labels, data, label='Observed')
-            plt.plot(labels, [np.mean(brownian_values) for _ in data], label='Average Control')
+            plt.plot(labels, [np.mean(brownian_values)
+                     for _ in data], label='Average Control')
 
             plt.errorbar(labels, data, errors)
 
-            plt.legend()
+            lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
             for path in save_paths:
-                plt.savefig(path + str(key) + '.png')
+                plt.savefig(path + str(key) + '.png',
+                    bbox_extra_artists=(lgd,), bbox_inches='tight')
 
             plt.close()
 
@@ -386,7 +410,7 @@ def yield_all_filter_permutations(hierarchy: [[str]], current_filters: [str] = [
         for filter in hierarchy[0]:
             for item in yield_all_filter_permutations(hierarchy[1:], current_filters + [filter]):
                 yield item
-                    
+
         return
 
 
@@ -395,13 +419,16 @@ if __name__ == '__main__':
     turning_point_lookup: List[Tuple[List[str], float]] = []
 
     os.chdir(file_location)
-    hierarchy: [[str]] = [size_filters, directional_filters, voltage_filters, z_position_filters]
+    hierarchy: [[str]] = [size_filters, directional_filters,
+                          voltage_filters, z_position_filters]
 
     # Get all the files requested
     print('Loading files...')
-    files: List[Tuple[str, str, List[str], pd.DataFrame, pd.DataFrame]] = load_all_filter_permutations(hierarchy)
+    files: List[Tuple[str, str, List[str], pd.DataFrame,
+                      pd.DataFrame]] = load_all_filter_permutations(hierarchy)
 
-    print('Loaded', len(files), 'patterns, for a total of', len(files) * 2, 'files.')
+    print('Loaded', len(files), 'patterns, for a total of',
+          len(files) * 2, 'files.')
 
     # Graph groups of files matching given filters
     print('Graphing selected files...')
@@ -411,6 +438,10 @@ if __name__ == '__main__':
                                        ['/home/jorb/Programs/physicsScripts/'],
                                        turning_point_lookup,
                                        True)
+
+    if skip_permutations:
+        print('Exiting due to skip_permutations')
+        exit(0)
 
     print('Loading permutations...')
     perm_list = [[]]
@@ -428,12 +459,15 @@ if __name__ == '__main__':
         if save_number % 10 == 0:
             print(save_number, 'of', len(perm_list))
 
-        graph_all_from_filter_list_and_dfs(perm, files, ['/home/jorb/Programs/physicsScripts/perm/'], turning_point_lookup)
+        graph_all_from_filter_list_and_dfs(
+            perm, files, ['/home/jorb/Programs/physicsScripts/perm/'], turning_point_lookup)
 
     try:
-        print('Final mean Brownian:', np.mean(brownian_values), 'w/ std', np.std(brownian_values))
+        print('Final mean Brownian:', np.mean(brownian_values),
+              'w/ std', np.std(brownian_values))
         print('Final median Brownian:', np.median(brownian_values))
-        print('Final mean Brownian STD:', np.mean(brownian_stds), 'w/ std', np.std(brownian_stds))
+        print('Final mean Brownian STD:', np.mean(
+            brownian_stds), 'w/ std', np.std(brownian_stds))
         print('Final median Brownian STD:', np.median(brownian_stds))
     except:
         print('Brownian values:', brownian_values)

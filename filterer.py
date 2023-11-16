@@ -29,7 +29,7 @@ jedehmel@mavs.coloradomesa.edu
 
 
 # Put the folder you want to operate on into this string
-folder: str = '/home/jorb/data/Report/Top'
+folder: str = ''
 
 '''
 # Refer to this list when modifying do_std_filter_flags
@@ -102,7 +102,7 @@ brownian_speed_threshold_fallback: float = 0.042114570268546765
 
 # Turns on or off extra graphs
 do_filter_scatter_plots: bool = True
-do_extra_filter_scatter_plots: bool = True
+do_extra_filter_scatter_plots: bool = False
 
 # If true, saves a histogram of filtered datapoints for each file
 save_filtering_data: bool = False
@@ -278,7 +278,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
         if do_duration_thresh:
             for row in csv.iterrows():
-                # Must pass linearity threshold
+                # Must pass duration threshold
                 if float(row[1]['TRACK_DURATION']) < duration_threshold:
                     dropped_row_indices.append(
                         [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DURATION_THRESHOLD'])

@@ -262,11 +262,11 @@ def graph_multiple_relative(data: [[float]],
     plt.xlabel(axis_labels[0])
     plt.ylabel(axis_labels[1])
 
-    plt.legend()
+    lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
     for path in save_paths:
         if path is not None:
-            plt.savefig(path)
+            plt.savefig(path, bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     plt.close()
 
@@ -348,11 +348,11 @@ def graph_multiple_relative_individually(data: [[float]],
         plt.xlabel(axis_labels[0])
         plt.ylabel(axis_labels[1])
 
-        plt.legend()
+        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
         for path in save_paths:
             if path is not None:
-                plt.savefig(path[:-4] + str(i))
+                plt.savefig(path[:-4] + str(i), bbox_extra_artists=(lgd,), bbox_inches='tight')
 
     return
 
