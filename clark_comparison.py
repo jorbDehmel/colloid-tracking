@@ -4,6 +4,9 @@ glycerol data.
 
 All graphs produced herein should be velocity vs. height.
 
+Does this process for each pattern, searching for files ONLY
+in the current working directory.
+
 Graph set A:
 - each graph is a single voltage
 - each curve is a frequency
@@ -11,6 +14,10 @@ Graph set A:
 Graph set B:
 - each graph is a single frequency
 - each curve is a voltage
+
+Jordan Dehmel, 2023
+jdehmel@outlook.com
+jedehmel@mavs.coloradomesa.edu
 '''
 
 from typing import *
@@ -46,14 +53,14 @@ z_position_filters: [str] = ['8940', '8960', '8965', '8980', '8985', '8990',
                              '9115', '9140', '9180', '9197',
                              '9205', '9230', '9240', '9255', '9265', '9280', '9290',
                              '9305', '9315', '9340',
-                             'top-100','top-97', 'top-75', 'top-50', 'top-25', 'top_',
-                             'bot_', 'bot+25', 'bot+50', ]
+                             'top-100','top-97', 'top-75', 'top-50', 'top-25', 'top(?!-)',
+                             'bot(?!\\+)', 'bot\\+25', 'bot\\+50', 'bot\\+75', 'bot\\+100']
 
 # The voltage filters to use
-voltages: Dict[str, str] = {'8[_ ][vV]' : '8v',
-                            '12[_ ][vV]' : '12v',
-                            '16[_ ][vV]' : '16v',
-                            '20[_ ][vV]' : '20v'}
+voltages: Dict[str, str] = {'8[_ ]?[vV]' : '8v',
+                            '12[_ ]?[vV]' : '12v',
+                            '16[_ ]?[vV]' : '16v',
+                            '20[_ ]?[vV]' : '20v'}
 
 # The frequency filters to use
 frequencies: Dict[str, str] = {r'^0\.' : '0 Hz',
@@ -239,10 +246,20 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
 
 
 if __name__ == '__main__':
-    graph_all_matching('120_um_Top_Down')
-    graph_all_matching('120_um_Bottom_Up')
+    if len(sys.argv) == 1:
+        # Put specialized stuff here
 
-    graph_all_matching('240_um_Top_Down')
-    graph_all_matching('240_um_Bottom_Up')
+        graph_all_matching('120um')    
+
+        # graph_all_matching('120_um_Top_Down')
+        # graph_all_matching('120_um_Bottom_Up')
+
+        # graph_all_matching('240_um_Top_Down')
+        # graph_all_matching('240_um_Bottom_Up')
+
+    else:
+        print('Running from command line arguments...')
+        for arg in sys.argv:
+            graph_all_matching(arg)
     
     exit(0)
