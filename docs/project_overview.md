@@ -104,6 +104,10 @@ This file contains only utilities for automatic name detection via Regular Expre
 
 This file contains only utilities for plotting straight line speeds with respect to their crossover frequencies. You should not need to do anything with this file.
 
+## `comparisons.py`
+
+This file creates height-wise comparison graphs of all data in the current working directory, assuming that it can be broken down by height. This is true for Clark's initial glycerol data, but not KCL or the waveform experiments.
+
 ## The `legacy` folder
 
 This folder contains old code which is no longer relevant. It can be ignored.

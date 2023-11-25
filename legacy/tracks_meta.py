@@ -23,6 +23,9 @@ Outline:
 '''
 
 import os
+import sys
+
+sys.path.insert(0, '/home/jorb/Programs/physicsScripts')
 
 import filterer
 import reverser
@@ -141,12 +144,12 @@ if __name__ == '__main__':
     filterer.do_quality_percentile_filter = True
 
     # Ramp wave
-    analyze_folder('/home/jorb/data/tracks/Ramp Wave', save_prefix='ramp')
+    analyze_folder('/home/jorb/data/tracks (waveforms)/Ramp Wave', save_prefix='ramp')
 
     # Sine wave
-    analyze_folder('/home/jorb/data/tracks/Sine Wave', save_prefix='sine')
+    analyze_folder('/home/jorb/data/tracks (waveforms)/Sine Wave', save_prefix='sine')
 
     # Square wave
-    analyze_folder('/home/jorb/data/tracks/Square Wave', save_prefix='square')
+    analyze_folder('/home/jorb/data/tracks (waveforms)/Square Wave', save_prefix='square')
 
     pass

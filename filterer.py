@@ -9,6 +9,7 @@ from sys import *
 from time import time
 import name_fixer
 from reverser import graph_relative
+from typing import *
 
 '''
 Main particle filtering utilities
@@ -490,7 +491,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     output_std: [float] = [0.0 for _ in range(len(col_names))]
 
     # Calculate means and adjusted STD's
-    for i, item in enumerate(csv.columns):
+    for i, item in enumerate(col_names):
         output_data[i] = mean(csv[item].astype(float).to_list())
         output_std[i] = std(csv[item].astype(float).to_list())
 
@@ -909,6 +910,14 @@ if __name__ == '__main__':
             csv.to_csv(secondary_save_path + '/all_tracks.csv')
         csv.to_csv('all_tracks.csv')
 
+        temp = []
+        for item in floated_names:
+            if item not in temp:
+                temp.append(item)
+        floated_names = temp[:]
+
+        del temp
+
         floated_names.sort(key=lambda x: float(x))
 
         # Create actual scatter plot
@@ -916,8 +925,17 @@ if __name__ == '__main__':
 
         plt.figure(figsize=(6, 4), dpi=400)
 
-        plt.plot(floated_names, out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(
-            float).to_list(), label='Post-Filter Mean', alpha=0.5)
+        plt.xticks(ticks=[i for i in range(len(floated_names))],
+                   labels=[i for i in floated_names],
+                   rotation=45)
+
+        values: List[Tuple[float, float]] = []
+        for row in out_csv.iterrows():
+            values.append((row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED']))
+
+        values.sort(key=lambda p: float(p[0]))
+
+        plt.plot([value[0] for value in values], [value[1] for value in values], label='Post-Filter Mean', alpha=0.5)
 
         plt.scatter(only_lost_x + only_kept_x,
                     only_lost_y + only_kept_y,

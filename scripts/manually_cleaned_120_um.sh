@@ -33,4 +33,4 @@ $COM $DIR/16v/bot+100
 echo "Done with filtering."
 
 echo "Making unified graphs..."
-python3 /home/jorb/Programs/physicsScripts/clark_comparison.py '120um'
+python3 /home/jorb/Programs/physicsScripts/comparisons.py '120um'
