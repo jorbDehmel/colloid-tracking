@@ -54,7 +54,7 @@ z_position_filters: [str] = ['8940', '8960', '8965', '8980', '8985', '8990',
                              '9205', '9230', '9240', '9255', '9265', '9280', '9290',
                              '9305', '9315', '9340',
                              'top-100','top-97', 'top-75', 'top-50', 'top-25', 'top(?!-)',
-                             'bot(?!\\+)', 'bot\\+25', 'bot\\+50', 'bot\\+75', 'bot\\+100']
+                             'bot(?!\\+)', 'bot\\+25', 'bot\\+50', 'bot\\+70', 'bot\\+75', 'bot\\+100', 'bot\\+190', 'bot\\+210']
 
 # The voltage filters to use
 voltages: Dict[str, str] = {'5[_ ]?[vV]' : '5v',
@@ -63,7 +63,8 @@ voltages: Dict[str, str] = {'5[_ ]?[vV]' : '5v',
                             '12[_ ]?[vV]' : '12v',
                             '15[_ ]?[vV]' : '15v',
                             '16[_ ]?[vV]' : '16v',
-                            '20[_ ]?[vV]' : '20v'}
+                            '20[_ ]?[vV]' : '20v',
+                            '.*': 'UNKNOWN'}
 
 # The frequency filters to use
 frequencies: Dict[str, str] = {r'^0\.' : '0 Hz',
@@ -136,6 +137,12 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
     print('Fetching files from pattern ' + pattern + "...")
     files: List[File] = []
     found_names: [str] = name_fixer.find_all(pattern)
+
+    found_names = [item for item in found_names if item[-4:] != '.png']
+
+    print('Found files:')
+    for item in found_names:
+        print('\t', item)
 
     clean_pattern: str = pattern.replace('.', '_')
     clean_pattern = clean_pattern.replace('/', '_')
@@ -256,15 +263,12 @@ if __name__ == '__main__':
 
         graph_all_matching('120um')    
 
-        # graph_all_matching('120_um_Top_Down')
-        # graph_all_matching('120_um_Bottom_Up')
-
-        # graph_all_matching('240_um_Top_Down')
-        # graph_all_matching('240_um_Bottom_Up')
-
     else:
         print('Running from command line arguments...')
         for arg in sys.argv:
+            if arg[-3:] == '.py':
+                continue
+
             graph_all_matching(arg)
     
     exit(0)

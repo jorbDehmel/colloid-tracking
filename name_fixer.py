@@ -40,7 +40,7 @@ def fix_names(patterns: [str], given_names: [str] = None) -> [str | None]:
 
 # Given a filepath, yields the number of HERTZ (not kilo)
 def path_to_hz(path: str) -> float:
-    if 'control' in path:
+    if 'control' in path or 'Control' in path:
         return 0.0
 
     path_temp: str = path

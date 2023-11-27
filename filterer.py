@@ -49,7 +49,8 @@ col_names = ['TRACK_DISPLACEMENT',
 # A False in the first position means it will not apply STD filters
 # to the first item in col_names, in this case 'TRACK_DISPLACEMENT'.
 # If it were True instead, it will do that filtering.
-do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
+#do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
+do_std_filter_flags = None
 
 # Flags for which -1.5 * IQR filters to apply
 # This works just like above. If it is equal to None, it does none
@@ -68,7 +69,8 @@ conversion: float = 4 * 0.32
 # Activates the brownian straight-line-speed threshold filter
 # If active, removes any particle below Brownian mean
 # straight-line-speed
-do_speed_thresh: bool = True
+#do_speed_thresh: bool = True
+do_speed_thresh = False
 
 # Determines how many standard deviations a particle must be
 # above the Brownian mean in order to survive Brownian mean
@@ -86,8 +88,9 @@ do_linearity_thresh: bool = False
 # since error is higher on shorter tracks
 # If active, filters out any tracks w/ less than duration_threshold
 # frames.
-do_duration_thresh: bool = True
+#do_duration_thresh: bool = True
 duration_threshold: int = 65
+do_duration_thresh = False
 
 # If not None, also save graphs and .csv files here
 secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
@@ -196,7 +199,7 @@ patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '(300 ?khz.*track|t300 ?khz)']
 
 # If the above patterns cannot be matches, it will attempt these.
-fallback_patterns: [str] = ['((?<![0-9])0 ?khz|control)',
+fallback_patterns: [str] = ['((?<![0-9])0 ?khz|[cC]ontrol)',
                             '(0.8 ?khz|800 ?hz)',
                             '1 ?khz',
                             '5 ?khz',
@@ -273,6 +276,11 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     backup = csv.copy(deep=True)
 
+    # Null filtering
+    for row in csv.iterrows():
+        if float(row[1]['TRACK_DURATION']) != float(row[1]['TRACK_DURATION']):
+            csv.drop(axis=0, inplace=True, labels=[row[0]])
+
     # Do duration thresh here
     try:
         backup = csv.copy(deep=True)
@@ -280,7 +288,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if do_duration_thresh:
             for row in csv.iterrows():
                 # Must pass duration threshold
-                if float(row[1]['TRACK_DURATION']) < duration_threshold:
+                if float(row[1]['TRACK_DURATION']) < duration_threshold or float(row[1]['TRACK_DURATION']) != float(row[1]['TRACK_DURATION']):
                     dropped_row_indices.append(
                         [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DURATION_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -299,6 +307,12 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Now drop duration, it's not needed anymore
     csv.drop(axis=1, inplace=True, labels=['TRACK_DURATION'])
     assert csv.columns.to_list() == col_names
+
+    # Recheck column order
+    i: int = 0
+    for item in csv.columns.to_list():
+        assert item == col_names[i]
+        i += 1
 
     try:
         # Do thresholding here
@@ -726,7 +740,7 @@ if __name__ == '__main__':
         print('Getting current folder...')
 
     folder = getcwd()
-
+    
     if not silent:
         print('Analyzing input data at', folder)
 
