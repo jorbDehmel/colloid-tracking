@@ -125,18 +125,21 @@ if __name__ == '__main__':
     plt.ylim((0, processed_w))
 
     plt.scatter(x_values, y_values, c=colors, s=3.0)
+    plt.title('Tracked Speckles')
+    plt.savefig('tracked_speckles.png')
     plt.show()
+
     plt.clf()
 
     plt.scatter([i for i in range(len(tracks))],
                 [track.sls() for track in tracks],
-                c='r', label='SLS')
+                c='r', label='Mean Straight Line Speed')
     plt.scatter([i for i in range(len(tracks))],
                 [track.mdts() for track in tracks],
-                c='b', label='MDTS')
+                c='b', label='Mean Distance Traveled Speed')
     plt.scatter([i for i in range(len(tracks))],
                 [track.mv() for track in tracks],
-                c='g', label='MIV')
+                c='g', label='Mean Instantaneous Velocity')
 
     sls_values: List[float] = [track.sls() for track in tracks]
     sls_mean: float = sum(sls_values) / len(sls_values)
@@ -145,6 +148,8 @@ if __name__ == '__main__':
     plt.hlines(y=[sls_mean - sls_std, sls_mean, sls_mean + sls_std], xmin=0, xmax=len(tracks), colors=['k'], label='Mean SLS +- 1 STD')
 
     plt.legend()
+    plt.title('Speckle Velocities')
+    plt.savefig('speckle_velocities.png')
     plt.show()
 
     print(f'Mean SLS: {sls_mean} processed pixels/frame, SLS STD: {sls_std} processed pixels/frame')
