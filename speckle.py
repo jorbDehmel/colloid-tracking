@@ -2,6 +2,13 @@
 Resources for reading and processing speckle files.
 Also functions as a main function processing a single speckle
 output file.
+
+Statistic details:
+
+Mean Straight Line Speed = magnitude(vector from start to end) / number of frames
+Mean Instantaneous Velocity = sum(magnitude(velocities)) / number of velocities
+Mean Distance Traveled Speed = sum(magnitude(velocities)) / number of frames
+
 '''
 
 import pandas as pd
@@ -33,7 +40,7 @@ class Track:
         distance: float = (dx ** 2 + dy ** 2) ** 0.5
 
         # Number of frames
-        df: int = self.frames[-1] - self.frames[0]
+        df: int = self.frames[-1] - self.frames[0] + 1
         
         return distance / df
 
@@ -53,8 +60,8 @@ class Track:
         assert len(dx) == len(dy)
         distances: List[float] = [(dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
         
-        # Number of frames
-        df: int = self.frames[-1] - self.frames[0]
+        # Number of frames it existed
+        df: int = self.frames[-1] - self.frames[0] + 1
         
         return sum(distances) / df
 
@@ -81,7 +88,7 @@ class Track:
         Number of frames the track existed for
         '''
 
-        return self.frames[-1] - self.frames[0]
+        return self.frames[-1] - self.frames[0] + 1
 
     def displacement(self) -> float:
         '''
@@ -159,22 +166,6 @@ def process_file(in_filepath: str, spots_filepath: str,
         arr: List[List[Union[str, float, int]]] = []
         cur: List[Union[str, float, int]] = []
 
-        '''
-        Real header from trackMate:
-
-        LABEL,TRACK_INDEX,TRACK_ID,NUMBER_SPOTS,NUMBER_GAPS,NUMBER_SPLITS,NUMBER_MERGES,NUMBER_COMPLEX,LONGEST_GAP,TRACK_DURATION,TRACK_START,TRACK_STOP,TRACK_DISPLACEMENT,TRACK_X_LOCATION,TRACK_Y_LOCATION,TRACK_Z_LOCATION,TRACK_MEAN_SPEED,TRACK_MAX_SPEED,TRACK_MIN_SPEED,TRACK_MEDIAN_SPEED,TRACK_STD_SPEED,TRACK_MEAN_QUALITY,TOTAL_DISTANCE_TRAVELED,MAX_DISTANCE_TRAVELED,CONFINEMENT_RATIO,MEAN_STRAIGHT_LINE_SPEED,LINEARITY_OF_FORWARD_PROGRESSION,MEAN_DIRECTIONAL_CHANGE_RATE
-        Label,Track index,Track ID,Number of spots in track,Number of gaps,Number of split events,Number of merge events,Number of complex points,Longest gap,Track duration,Track start,Track stop,Track displacement,Track mean X,Track mean Y,Track mean Z,Track mean speed,Track max speed,Track min speed,Track median speed,Track std speed,Track mean quality,Total distance traveled,Max distance traveled,Confinement ratio,Mean straight line speed,Linearity of forward progression,Mean directional change rate
-        Label,Index,ID,N spots,N gaps,N splits,N merges,N complex,Lgst gap,Duration,Track start,Track stop,Track disp.,Track X,Track Y,Track Z,Mean sp.,Max speed,Min speed,Med. speed,Std speed,Mean Q,Total dist.,Max dist.,Cfn. ratio,Mn. v. line,Fwd. progr.,Mn. ? rate
-        ,,,,,,,,,(frame),(frame),(frame),(pixel),(pixel),(pixel),(pixel),(pixel/frame),(pixel/frame),(pixel/frame),(pixel/frame),(pixel/frame),(quality),(pixel),(pixel),,(pixel/frame),,(rad/frame)
-        
-        1 real header row, followed by 3 dumb header rows
-
-        Important header items:
-
-        TRACK_INDEX,TRACK_DURATION,TRACK_DISPLACEMENT,MEAN_STRAIGHT_LINE_SPEED,
-
-        '''
-
         labels: List[str] = ['TRACK_INDEX', 'TRACK_DURATION', 'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED']
 
         # And 3 dummy rows (see above)
@@ -186,7 +177,7 @@ def process_file(in_filepath: str, spots_filepath: str,
         # Followed by real track data
         for i, track in enumerate(tracks):
             cur = [i,
-                   track.duration() * adjustment_coefficient,
+                   track.duration(),
                    track.displacement() * adjustment_coefficient,
                    track.sls() * adjustment_coefficient]
 
@@ -199,7 +190,7 @@ def process_file(in_filepath: str, spots_filepath: str,
 
 if __name__ == '__main__':
     # Uncomment to demonstrate translation script for speckle data to tracks data
-    # process_file('speckles.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
+    process_file('speckles.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
 
     frame: pd.DataFrame = pd.read_csv(input_filepath)
     
@@ -217,9 +208,32 @@ if __name__ == '__main__':
         elif 'start speckle' in row[0][0]:
             cur_track = Track()
         else:
-            cur_track.append(float(row[0][0]), float(row[0][1]), int(row[0][2]))
+            cur_track.append(float(row[0][0]), processed_w - float(row[0][1]), int(row[0][2]))
 
         i += 1
+
+    # Load old stuff from trackmate
+    old_x: List[float] = []
+    old_y: List[float] = []
+    old_sls: List[float] = []
+    trackmate_filepath: str = 'filtered track data.csv'
+
+    old: pd.DataFrame = pd.read_csv(trackmate_filepath)
+    for i, row in enumerate(old.iterrows()):
+        if i < 2:
+            continue
+
+        old_x.append(float(row[1]['TRACK_X_LOCATION']))
+        old_y.append(float(row[1]['TRACK_Y_LOCATION']))
+        old_sls.append(float(row[1]['MEAN_STRAIGHT_LINE_SPEED']))
+
+    # Adjust scale
+    old_x = [i / (original_w / processed_w) for i in old_x]
+    old_y = [i / (original_w / processed_w) for i in old_y]
+    old_sls = [i / (original_w / processed_w) for i in old_sls]
+
+    # Adjust position (y is flipped)
+    old_y = [processed_w - i for i in old_y]
 
     all_colors: List[str] = ['b', 'g', 'r', 'y']
 
@@ -239,8 +253,13 @@ if __name__ == '__main__':
     plt.xlim((0, processed_w))
     plt.ylim((0, processed_w))
 
+    plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
     plt.scatter(x_values, y_values, c=colors, s=3.0)
-    plt.title('Tracked Speckles')
+    plt.legend()
+
+    plt.title('Tracked Speckles (Scaled Down)')
+    plt.xlabel('X Pixels')
+    plt.ylabel('Y Pixels')
     plt.savefig('tracked_speckles.png')
     # plt.show()
 
@@ -261,6 +280,11 @@ if __name__ == '__main__':
     sls_std: float = np.std(sls_values)
 
     plt.hlines(y=[sls_mean - sls_std, sls_mean, sls_mean + sls_std], xmin=0, xmax=len(tracks), colors=['k'], label='Mean SLS +- 1 STD')
+    
+    manual_mean: float = sum(old_sls) / len(old_sls)
+    manual_std: float = np.std(old_sls)
+
+    plt.hlines(y=[manual_mean - manual_std, manual_mean, manual_mean + manual_std], xmin=0, xmax=len(tracks), colors=['r'], label='Manual Mean SLS +- 1 STD')
 
     plt.legend()
     plt.title('Speckle Velocities')
