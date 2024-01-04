@@ -40,7 +40,7 @@ class Track:
         distance: float = (dx ** 2 + dy ** 2) ** 0.5
 
         # Number of frames
-        df: int = self.frames[-1] - self.frames[0] + 1
+        df: int = self.frames[-1] - self.frames[0]
         
         return distance / df
 
@@ -107,7 +107,7 @@ original_w: int = 1028
 processed_w: int = 256
 
 
-def process_file(in_filepath: str, spots_filepath: str,
+def process_file(input_filepath: str, spots_filepath: str,
                  tracks_filepath: Union[str, None] = None,
                  adjustment_coefficient: float = 1.0) -> None:
     '''
@@ -190,7 +190,8 @@ def process_file(in_filepath: str, spots_filepath: str,
 
 if __name__ == '__main__':
     # Uncomment to demonstrate translation script for speckle data to tracks data
-    process_file('speckles.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
+    process_file('1khz.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
+    input_filepath = 'junk.csv'
 
     frame: pd.DataFrame = pd.read_csv(input_filepath)
     
@@ -220,7 +221,7 @@ if __name__ == '__main__':
 
     old: pd.DataFrame = pd.read_csv(trackmate_filepath)
     for i, row in enumerate(old.iterrows()):
-        if i < 2:
+        if i < 3:
             continue
 
         old_x.append(float(row[1]['TRACK_X_LOCATION']))
@@ -253,27 +254,75 @@ if __name__ == '__main__':
     plt.xlim((0, processed_w))
     plt.ylim((0, processed_w))
 
+
+    plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
+    
     plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
     plt.scatter(x_values, y_values, c=colors, s=3.0)
-    plt.legend()
+
+    lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
     plt.title('Tracked Speckles (Scaled Down)')
     plt.xlabel('X Pixels')
     plt.ylabel('Y Pixels')
-    plt.savefig('tracked_speckles.png')
-    # plt.show()
+    plt.savefig('tracked_speckles.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    
+    plt.clf()
+
+    '''
+    dx = dy = sqrt(2) * sls
+    '''
+
+    old_arrows: List[Tuple[float, float, float]] = []
+    new_arrows: List[Tuple[float, float, float]] = []
+
+    for track in tracks:
+        new_arrows.append((track.x_values[0], track.y_values[0], track.sls()))
+
+    for i in range(len(old_sls)):
+        old_arrows.append((old_x[i], old_y[i], old_sls[i]))
+
+    for arrow in old_arrows:
+        plt.arrow(arrow[0], arrow[1], 100 * arrow[2], 0)
+
+    for arrow in new_arrows:
+        plt.arrow(arrow[0], arrow[1], 100 * arrow[2], 0)
+
+    plt.scatter(x_values, y_values, c=colors, s=3.0, alpha=0.1)
+
+    plt.scatter(old_x, old_y, s=25.0, label='TrackMate')
+    plt.scatter([track.x_values[0] for track in tracks], [track.y_values[0] for track in tracks], s=25.0, label='Speckles')
+
+    plt.legend()
+    plt.savefig('vectors.png')
 
     plt.clf()
 
+    # Sort things
+    old_sls.sort(reverse=True)
+    tracks.sort(reverse=True, key=lambda x: x.sls())
+
     plt.scatter([i for i in range(len(tracks))],
                 [track.sls() for track in tracks],
-                c='r', label='Mean Straight Line Speed')
+                c='r', label='Mean Straight Line Speed (Speckles)')
+
+    plt.scatter([i for i in range(len(old_sls))],
+                [sls for sls in old_sls],
+                c='b', label='Mean Straight Line Speed (Manual)')
+
+    error_squared: List[float] = [abs(tracks[i].sls() - old_sls[i]) for i in range(min(len(tracks), len(old_sls)))]
+    plt.scatter([i for i in range(len(error_squared))],
+                [err for err in error_squared],
+                c='y', label='Absolute Value of Error')
+
+    '''
     plt.scatter([i for i in range(len(tracks))],
                 [track.mdts() for track in tracks],
                 c='b', label='Mean Distance Traveled Speed')
     plt.scatter([i for i in range(len(tracks))],
                 [track.mv() for track in tracks],
                 c='g', label='Mean Instantaneous Velocity')
+    '''
 
     sls_values: List[float] = [track.sls() for track in tracks]
     sls_mean: float = sum(sls_values) / len(sls_values)
@@ -289,7 +338,6 @@ if __name__ == '__main__':
     plt.legend()
     plt.title('Speckle Velocities')
     plt.savefig('speckle_velocities.png')
-    # plt.show()
 
     print(f'Mean SLS: {sls_mean} processed pixels/frame, SLS STD: {sls_std} processed pixels/frame')
     
