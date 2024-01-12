@@ -190,7 +190,7 @@ def process_file(input_filepath: str, spots_filepath: str,
 
 if __name__ == '__main__':
     # Uncomment to demonstrate translation script for speckle data to tracks data
-    process_file('1khz.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
+    process_file('/home/jorb/data/120um_16v_speckles_clean/bot/analysis/1khz_speckles.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
     input_filepath = 'junk.csv'
 
     frame: pd.DataFrame = pd.read_csv(input_filepath)
