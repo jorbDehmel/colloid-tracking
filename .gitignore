@@ -8,3 +8,4 @@ perm/
 tk
 *.png
 *.csv
+*.pickle

@@ -85,7 +85,6 @@ if __name__ == '__main__':
     print(f'Mean duration: {np.mean(durations)} Duration STD: {np.std(durations)}')
 
     plt.savefig(root.replace('/', '_') + '_speckle_scatter.png')
-    # plt.show()
 
     plt.clf()
 
@@ -94,4 +93,3 @@ if __name__ == '__main__':
     plt.errorbar(labels, means, yerr=stds)
 
     plt.savefig(root.replace('/', '_') + '_speckle_plot.png')
-    # plt.show()

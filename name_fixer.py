@@ -2,6 +2,7 @@
 
 import re
 import os
+from typing import *
 
 
 '''
@@ -14,9 +15,9 @@ index in the output is None.
 '''
 
 
-def fix_names(patterns: [str], given_names: [str] = None) -> [str | None]:
+def fix_names(patterns: List[str], given_names: Union[List[str], None] = None) -> List[Union[str, None]]:
     # Initialize output array
-    out: [str | None] = [None for _ in patterns]
+    out: List[Union[str, None]] = [None for _ in patterns]
 
     # Iterate
     if given_names is None or len(given_names) == 0:
@@ -71,9 +72,9 @@ def path_to_hz(path: str) -> float:
 
 
 # Find all filenames matching a given pattern
-def find_all(pattern: str) -> [str]:
+def find_all(pattern: str) -> List[str]:
     # Initialize output array
-    out: [str | None] = []
+    out: List[Union[str, None]] = []
 
     # Iterate
     for name in os.listdir():
@@ -85,11 +86,11 @@ def find_all(pattern: str) -> [str]:
 
 
 # Find all filenames which match a given set of patterns
-def find_all_from_filters(filters: [str], final_file_qualifier: str) -> [str]:
-    name_array: [str] = find_all(filters[0])
+def find_all_from_filters(filters: List[str], final_file_qualifier: str) -> List[str]:
+    name_array: List[str] = find_all(filters[0])
 
     for filter in filters[1:]:
-        temp: [str] = find_all(filter)
+        temp: List[str] = find_all(filter)
 
         name_array = [name for name in name_array if name in temp]
 
@@ -102,9 +103,9 @@ def find_all_from_filters(filters: [str], final_file_qualifier: str) -> [str]:
 
 # Find all filenames matching a given pattern
 # AND search subfolders
-def find_all_recursive(pattern: str) -> [str]:
+def find_all_recursive(pattern: str) -> List[str]:
     # Initialize output array
-    out: [str | None] = []
+    out: List[Union[str, None]] = []
 
     # Iterate
     for root, _, filenames in os.walk(os.getcwd()):
@@ -131,7 +132,7 @@ def get_cwd() -> str:
 
 
 if __name__ == '__main__':
-    patterns: [str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?khz)',
+    patterns: List[str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?khz)',
                        '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
                        '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz']
 

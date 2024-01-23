@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+from typing import *
 
 '''
 Utilities for plotting relative straight line speed graphs
@@ -37,8 +38,8 @@ midpoint of the crossover range, then simply multiply by
 '''
 
 
-def get_relative_old(data: [float], turning_point_index: int) -> [float]:
-    out: [float] = [item - data[turning_point_index] for item in data]
+def get_relative_old(data: List[float], turning_point_index: int) -> List[float]:
+    out: List[float] = [item - data[turning_point_index] for item in data]
     out[turning_point_index] = 0.0
 
     for i in range(turning_point_index + 1, len(data)):
@@ -47,16 +48,16 @@ def get_relative_old(data: [float], turning_point_index: int) -> [float]:
     return out
 
 
-def graph_relative_old(data: [float],
+def graph_relative_old(data: List[float],
                        turning_point_label: str,
-                       labels: [str],
+                       labels: List[str],
                        title: str = 'title',
                        save_path: str = 'relative_graph.png',
-                       axis_labels: (str) = ('x', 'y'),
+                       axis_labels: Tuple[str, str] = ('x', 'y'),
                        do_erase: bool = True,
                        do_save: bool = True,
                        label: str = ''
-                       ) -> [float]:
+                       ) -> None:
 
     turning_point_index: int = 0
     while turning_point_index < len(labels) and float(labels[turning_point_index + 1]) <= float(turning_point_label):
@@ -70,7 +71,7 @@ def graph_relative_old(data: [float],
 
     plt.plot(labels, get_relative(data, turning_point_index), label=label)
 
-    zeros: [float] = [0.0 for _ in data]
+    zeros: List[float] = [0.0 for _ in data]
     plt.plot(zeros)
 
     if do_save:
@@ -81,8 +82,8 @@ def graph_relative_old(data: [float],
 
 # Inserts a zero such that turning_point_index points to it,
 # and multiplies everything afterwards by 1.
-def get_relative(data: [float], turning_point_index: int) -> [float]:
-    out: [float] = []
+def get_relative(data: List[float], turning_point_index: int) -> List[float]:
+    out: List[float] = []
 
     for i in range(0, turning_point_index):
         out.append(data[i])
@@ -96,16 +97,16 @@ def get_relative(data: [float], turning_point_index: int) -> [float]:
 
 
 # Like graph_multiple_relative,  but saves to .csv instead of .png
-def save_multiple_relative(data: [[float]],
-                           turning_points: [str],
-                           labels: [[str]],
-                           save_paths: [str],
-                           line_labels: [str],
-                           errors: [[float]] = None) -> None:
+def save_multiple_relative(data: List[List[float]],
+                           turning_points: List[str],
+                           labels: List[List[str]],
+                           save_paths: List[str],
+                           line_labels: List[str],
+                           errors: Union[List[List[float]], None] = None) -> None:
 
-    # Create a complete list of all the labels
+    # Create a complete List of all the labels
     # This keeps weird labels from being pushed to the end of the graph
-    complete_labels: [str] = []
+    complete_labels: List[str] = []
 
     for label_list in labels:
         for label in label_list:
@@ -127,25 +128,25 @@ def save_multiple_relative(data: [[float]],
     Rows will be line_labels
     '''
 
-    extra_columns: [str] = ['INVERSION_FREQ_HZ']
+    extra_columns: List[str] = ['INVERSION_FREQ_HZ']
 
-    array: [[float]] = [[] for _ in data]
+    array: [List[float]] = [[] for _ in data]
 
     for i, dataset in enumerate(data):
         turning_point_index: int = 0
         while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
             turning_point_index += 1
 
-        relative_data: [float] = get_relative(dataset, turning_point_index)
+        relative_data: List[float] = get_relative(dataset, turning_point_index)
 
-        relative_labels: [str] = labels[i][:turning_point_index] + \
+        relative_labels: List[str] = labels[i][:turning_point_index] + \
             [turning_points[i]] + labels[i][turning_point_index:]
 
-        relative_errors: [float] = errors[i][:turning_point_index] + \
+        relative_errors: List[float] = errors[i][:turning_point_index] + \
             [0.0] + errors[i][turning_point_index:]
 
-        complete_data: [float] = []
-        complete_errors: [float] = []
+        complete_data: List[float] = []
+        complete_errors: List[float] = []
         for item in complete_labels:
             if item in relative_labels:
                 j = relative_labels.index(item)
@@ -157,7 +158,7 @@ def save_multiple_relative(data: [[float]],
                 complete_data.append(None)
                 complete_errors.append(None)
 
-        extra: [float] = [0.0 for _ in extra_columns]
+        extra: List[float] = [0.0 for _ in extra_columns]
 
         # Extra data stuff here
         extra[0] = turning_points[i]
@@ -165,7 +166,7 @@ def save_multiple_relative(data: [[float]],
         array[i] = complete_data + complete_errors + extra
 
     # Array to DF
-    columns: [str] = [str(f) + 'HZ_SLS' for f in complete_labels] + \
+    columns: List[str] = [str(f) + 'HZ_SLS' for f in complete_labels] + \
         [str(f) + 'HZ_SLS_STD' for f in complete_labels] + extra_columns
     frame: pd.DataFrame = pd.DataFrame(array,
                                        index=line_labels,
@@ -177,18 +178,18 @@ def save_multiple_relative(data: [[float]],
     return
 
 
-def graph_multiple_relative(data: [[float]],
-                            turning_points: [str],
-                            labels: [[str]],
-                            save_paths: [str],
+def graph_multiple_relative(data: [List[float]],
+                            turning_points: List[str],
+                            labels: [List[str]],
+                            save_paths: List[str],
                             axis_labels: (str),
-                            line_labels: [str],
+                            line_labels: List[str],
                             subtitle: str = None,
-                            errors: [[float]] = None) -> None:
+                            errors: [List[float]] = None) -> None:
 
-    # Create a complete list of all the labels
+    # Create a complete List of all the labels
     # This keeps weird labels from being pushed to the end of the graph
-    complete_labels: [str] = []
+    complete_labels: List[str] = []
 
     for label_list in labels:
         for label in label_list:
@@ -206,7 +207,7 @@ def graph_multiple_relative(data: [[float]],
     # We only need to graph one line out of our many lines
     # for all the complete_labels to appear in the correct
     # order, so we will just do the zeros line in it.
-    zeros: [float] = [0.0 for _ in complete_labels]
+    zeros: List[float] = [0.0 for _ in complete_labels]
 
     plt.clf()
 
@@ -219,7 +220,7 @@ def graph_multiple_relative(data: [[float]],
     plt.title(axis_labels[1] + ' by ' + axis_labels[0] +
               ', Relative to Crossover Point.' + ('\n' + subtitle if subtitle is not None else ''))
 
-    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
+    colors: List[str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
                      'tab:orange', 'tab:brown', 'tab:gray', 'pink', 'indigo']
 
     for i, dataset in enumerate(data):
@@ -228,26 +229,26 @@ def graph_multiple_relative(data: [[float]],
             while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
                 turning_point_index += 1
 
-            relative_data: [float] = get_relative(dataset, turning_point_index)
+            relative_data: List[float] = get_relative(dataset, turning_point_index)
 
-            relative_labels: [str] = labels[i][:turning_point_index] + \
+            relative_labels: List[str] = labels[i][:turning_point_index] + \
                 [turning_points[i]] + labels[i][turning_point_index:]
 
             if errors is not None:
-                relative_errors: [float] = errors[i][:turning_point_index] + \
+                relative_errors: List[float] = errors[i][:turning_point_index] + \
                     [0.0] + errors[i][turning_point_index:]
             else:
-                relative_errors: [float] = None
+                relative_errors: List[float] = None
 
         else:
-            relative_data: [float] = dataset[:]
-            relative_labels: [str] = labels[i][:]
+            relative_data: List[float] = dataset[:]
+            relative_labels: List[str] = labels[i][:]
 
             if errors is not None:
-                relative_errors: [float] = [
+                relative_errors: List[float] = [
                     err if err is not None else 0.0 for err in errors[i]]
             else:
-                relative_errors: [float] = None
+                relative_errors: List[float] = None
 
         if relative_errors is not None:
             plt.errorbar(relative_labels, relative_data,
@@ -273,18 +274,18 @@ def graph_multiple_relative(data: [[float]],
     return
 
 
-def graph_multiple_relative_individually(data: [[float]],
-                                         turning_points: [str],
-                                         labels: [[str]],
-                                         save_paths: [str],
-                                         axis_labels: (str),
-                                         line_labels: [str],
+def graph_multiple_relative_individually(data: List[List[float]],
+                                         turning_points: List[str],
+                                         labels: List[List[str]],
+                                         save_paths: List[str],
+                                         axis_labels: Tuple[str],
+                                         line_labels: List[str],
                                          subtitle: str = None,
-                                         errors: [[float]] = None) -> None:
+                                         errors: List[List[float]] = None) -> None:
 
-    # Create a complete list of all the labels
+    # Create a complete List of all the labels
     # This keeps weird labels from being pushed to the end of the graph
-    complete_labels: [str] = []
+    complete_labels: List[str] = []
 
     for label_list in labels:
         for label in label_list:
@@ -302,9 +303,9 @@ def graph_multiple_relative_individually(data: [[float]],
     # We only need to graph one line out of our many lines
     # for all the complete_labels to appear in the correct
     # order, so we will just do the zeros line in it.
-    zeros: [float] = [0.0 for _ in complete_labels]
+    zeros: List[float] = [0.0 for _ in complete_labels]
 
-    colors: [str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
+    colors: List[str] = ['r', 'g', 'b', 'c', 'y', 'm', 'k',
                      'tab:orange', 'tab:brown', 'tab:gray', 'pink', 'indigo']
 
     for i, dataset in enumerate(data):
@@ -322,20 +323,20 @@ def graph_multiple_relative_individually(data: [[float]],
             while turning_point_index < len(labels[i]) and float(labels[i][turning_point_index]) <= float(turning_points[i]):
                 turning_point_index += 1
 
-            relative_data: [float] = get_relative(dataset, turning_point_index)
+            relative_data: List[float] = get_relative(dataset, turning_point_index)
 
-            relative_labels: [str] = labels[i][:turning_point_index] + \
+            relative_labels: List[str] = labels[i][:turning_point_index] + \
                 [turning_points[i]] + labels[i][turning_point_index:]
 
-            relative_errors: [float] = errors[i][:turning_point_index] + \
+            relative_errors: List[float] = errors[i][:turning_point_index] + \
                 [0.0] + errors[i][turning_point_index:]
             relative_errors = [
                 err if err is not None else 0.0 for err in relative_errors]
 
         else:
-            relative_data: [float] = dataset[:]
-            relative_labels: [str] = labels[i][:]
-            relative_errors: [float] = [
+            relative_data: List[float] = dataset[:]
+            relative_labels: List[str] = labels[i][:]
+            relative_errors: List[float] = [
                 err if err is not None else 0.0 for err in errors[i]]
 
         plt.errorbar(relative_labels, relative_data,
@@ -357,24 +358,24 @@ def graph_multiple_relative_individually(data: [[float]],
     return
 
 
-def graph_relative(data_in: [float],
+def graph_relative(data_in: List[float],
                    turning_point_label: str,
-                   labels: [str],
+                   labels: List[str],
                    title: str = 'title',
                    save_path: str = 'relative_graph.png',
                    axis_labels: (str) = ('x', 'y'),
                    do_erase: bool = True,
                    do_save: bool = True,
                    label: str = ''
-                   ) -> [float]:
+                   ) -> List[float]:
 
     # Find location of turning_point_label
     i: int = 0
     while i + 1 < len(labels) and float(labels[i + 1]) <= float(turning_point_label):
         i += 1
 
-    real_data: [float] = get_relative(data_in, i)
-    real_labels: [str] = labels[:i] + [turning_point_label] + labels[i:]
+    real_data: List[float] = get_relative(data_in, i)
+    real_labels: List[str] = labels[:i] + [turning_point_label] + labels[i:]
 
     if do_erase:
         plt.clf()
@@ -387,7 +388,7 @@ def graph_relative(data_in: [float],
 
     real_labels.sort(key=lambda x: float(x))
 
-    zeros: [float] = [0.0 for _ in real_data]
+    zeros: List[float] = [0.0 for _ in real_data]
     plt.plot(real_labels, zeros)
 
     plt.plot(real_labels, real_data, label=label)
