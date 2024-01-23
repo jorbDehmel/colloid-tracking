@@ -21,13 +21,5 @@ if __name__ == '__main__':
         speckle.original_w / speckle.processed_w)
 
 '''
-set FOLDER bot
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/100khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/75khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/50khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/25khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/10khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/5khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/1khz_speckles.csv &&
-python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/control_speckles.csv
+set FOLDER bot && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/100khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/75khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/50khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/25khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/10khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/5khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/1khz_speckles.csv && python speckle_to_track.py ~/data/120um_16v_speckles_clean/$FOLDER/analysis/control_speckles.csv
 '''

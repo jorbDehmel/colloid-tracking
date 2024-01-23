@@ -9,6 +9,9 @@ Mean Straight Line Speed = magnitude(vector from start to end) / number of frame
 Mean Instantaneous Velocity = sum(magnitude(velocities)) / number of velocities
 Mean Distance Traveled Speed = sum(magnitude(velocities)) / number of frames
 
+Capable of dropping any speckle track w/ duration under a
+certain threshold if so desired.
+
 '''
 
 import pandas as pd
@@ -102,9 +105,24 @@ class Track:
         return distance
 
 
-input_filepath: str = 'speckles.csv'
+'''
+Used for pixel resizing later. Change if these are not the
+dimensions of the data.
+
+original_w is the width in pixels of the source footage.
+processed_w is the width in pixels of the speckle-tracked footage.
+These may be different, as downsizing the footage for speckle tracking
+significantly improves speed.
+'''
 original_w: int = 1028
 processed_w: int = 256
+
+'''
+If set to 0, does no duration thresholding. Otherwise,
+automatically drops any track w/ frame duration less than this
+value.
+'''
+duration_threshold: int = 30
 
 
 def process_file(input_filepath: str, spots_filepath: str,
@@ -161,6 +179,9 @@ def process_file(input_filepath: str, spots_filepath: str,
                 cur_track.append(float(row[0][0]), float(row[0][1]), int(row[0][2]))
 
             i += 1
+
+        # Remove tracks below the duration threshold
+        tracks = [track for track in tracks if track.duration() >= duration_threshold]
 
         # Process into array
         arr: List[List[Union[str, float, int]]] = []

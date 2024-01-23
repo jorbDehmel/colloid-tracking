@@ -23,6 +23,22 @@ jdehmel@outlook.com
 jedehmel@mavs.coloradomesa.edu
 '''
 
+'''
+8, 12 v
+120 um
+1 khz
+bot+50
+
+12v 120um 1khz bot+50
+
+Why is this lower than it should be? I need to analyze this
+--meeting w/ sandeep
+
+8v 120um 5 khz? where is it in graph?
+
+wtf is up w/ my refiltered graphs?
+'''
+
 ##########################################################################################################
 # Begin settings
 # See docs/project_overview.pdf for a thorough explanation of each of these.
@@ -188,7 +204,7 @@ save_num: int = 0
 patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
                    '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
                    '(1 ?khz.*track|t1 ?khz)',
-                   '(5 ?khz.*track|t5 ?khz)',
+                   '((?<![0-9])5 ?khz.*track|t5 ?khz)',
                    '(10 ?khz.*track|t10 ?khz)',
                    '(25 ?khz.*track|t25 ?khz)',
                    '(50 ?khz.*track|t50 ?khz)',
@@ -202,7 +218,7 @@ patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
 fallback_patterns: [str] = ['((?<![0-9])0 ?khz|[cC]ontrol)',
                             '(0.8 ?khz|800 ?hz)',
                             '1 ?khz',
-                            '5 ?khz',
+                            '(?<![0-9])5 ?khz',
                             '10 ?khz',
                             '25 ?khz',
                             '50 ?khz',
