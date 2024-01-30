@@ -5,6 +5,8 @@ scatters/
 .vscode/
 test*/
 perm/
+refiltered/
+.mypy_cache/
 tk
 *.png
 *.csv

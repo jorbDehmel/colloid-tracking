@@ -65,7 +65,7 @@ col_names = ['TRACK_DISPLACEMENT',
 # A False in the first position means it will not apply STD filters
 # to the first item in col_names, in this case 'TRACK_DISPLACEMENT'.
 # If it were True instead, it will do that filtering.
-#do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
+# do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
 do_std_filter_flags = None
 
 # Flags for which -1.5 * IQR filters to apply
@@ -85,7 +85,7 @@ conversion: float = 4 * 0.32
 # Activates the brownian straight-line-speed threshold filter
 # If active, removes any particle below Brownian mean
 # straight-line-speed
-#do_speed_thresh: bool = True
+# do_speed_thresh: bool = True
 do_speed_thresh = False
 
 # Determines how many standard deviations a particle must be
@@ -104,7 +104,7 @@ do_linearity_thresh: bool = False
 # since error is higher on shorter tracks
 # If active, filters out any tracks w/ less than duration_threshold
 # frames.
-#do_duration_thresh: bool = True
+# do_duration_thresh: bool = True
 duration_threshold: int = 65
 do_duration_thresh = False
 
@@ -756,7 +756,7 @@ if __name__ == '__main__':
         print('Getting current folder...')
 
     folder = getcwd()
-    
+
     if not silent:
         print('Analyzing input data at', folder)
 
@@ -965,7 +965,8 @@ if __name__ == '__main__':
 
         values.sort(key=lambda p: float(p[0]))
 
-        plt.plot([value[0] for value in values], [value[1] for value in values], label='Post-Filter Mean', alpha=0.5)
+        plt.plot([value[0] for value in values], [value[1]
+                 for value in values], label='Post-Filter Mean', alpha=0.5)
 
         plt.scatter(only_lost_x + only_kept_x,
                     only_lost_y + only_kept_y,
