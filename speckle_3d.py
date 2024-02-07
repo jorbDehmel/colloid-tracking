@@ -7,11 +7,10 @@ y: Chamber Height
 z: Particle mobility
 '''
 
-from typing import *
+import sys
+from typing import List, Dict
 from matplotlib import pyplot as plt
-import numpy as np
 import pandas as pd
-import pickle
 
 # Dict of height folders w/ labels. These go off some given root folder.
 height_folders: Dict[str, str] = {
@@ -33,6 +32,7 @@ within_height_files: Dict[str, str] = {
     '100khz': '100khz_tracks.csv'
 }
 
+
 def load_file_speed_list(path: str) -> List[float]:
     '''
     Returns a list of all mobilities in a given file.
@@ -41,9 +41,11 @@ def load_file_speed_list(path: str) -> List[float]:
     frame: pd.DataFrame = pd.read_csv(path)
     frame.drop(inplace=True, labels=[0, 1, 2])
 
-    data: List[float] = [float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) for row in frame.iterrows()]
+    data: List[float] = [float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
+                         for row in frame.iterrows()]
 
     return data
+
 
 if __name__ == '__main__':
     fig = plt.figure()
@@ -55,12 +57,16 @@ if __name__ == '__main__':
 
         bins: Dict[str, List[float]] = {}
 
-        for file in within_height_files:
-            full_path: str = root_folder + '/' + height_folders[height_folder] + '/' + within_height_files[file]
+        for file, name in within_height_files.items():
+            full_path: str = (root_folder
+                              + '/'
+                              + height_folders[height_folder]
+                              + '/'
+                              + name)
             bins[file] = load_file_speed_list(full_path)
 
         # Graph collected speeds by bin
-        
+
         xs: List[float] = []
         zs: List[float] = []
 
@@ -82,4 +88,4 @@ if __name__ == '__main__':
     plt.legend()
     plt.show()
 
-    exit(0)
+    sys.exit(0)

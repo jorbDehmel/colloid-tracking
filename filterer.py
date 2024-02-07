@@ -1,16 +1,5 @@
 #!/usr/bin/python3
 
-# Import needed packages
-import pandas as pd
-from numpy import zeros, mean, std, percentile
-import matplotlib.pyplot as plt
-from os import *
-from sys import *
-from time import time
-import name_fixer
-from reverser import graph_relative
-from typing import *
-
 '''
 Main particle filtering utilities
 
@@ -21,28 +10,33 @@ given a folder.
 Jordan Dehmel, 2023
 jdehmel@outlook.com
 jedehmel@mavs.coloradomesa.edu
+
+TODO:
+- 8v, 12v, 120 um, 1 khz, bot+50
+  Why is this lower than it should be? I need to analyze this
+  (from meeting w/ sandeep)
+
+DONE:
+- 8v 120um 5 khz? where is it in graph? (regex issue)
+- wtf is up w/ my refiltered graphs? (all sorts of weird junk)
 '''
 
-'''
-8, 12 v
-120 um
-1 khz
-bot+50
+# Import needed packages
+import sys
+from time import time
+from typing import List, Tuple
+from os import chdir, getcwd, sep
 
-12v 120um 1khz bot+50
+import pandas as pd
+import matplotlib.pyplot as plt
+from numpy import zeros, mean, std, percentile
 
-Why is this lower than it should be? I need to analyze this
---meeting w/ sandeep
+import name_fixer
 
-8v 120um 5 khz? where is it in graph?
-
-wtf is up w/ my refiltered graphs?
-'''
-
-##########################################################################################################
+####################################################################################################
 # Begin settings
 # See docs/project_overview.pdf for a thorough explanation of each of these.
-##########################################################################################################
+####################################################################################################
 
 
 # Put the folder you want to operate on into this string
@@ -85,13 +79,13 @@ conversion: float = 4 * 0.32
 # Activates the brownian straight-line-speed threshold filter
 # If active, removes any particle below Brownian mean
 # straight-line-speed
-# do_speed_thresh: bool = True
-do_speed_thresh = False
+do_speed_thresh: bool = True
+# do_speed_thresh = False
 
 # Determines how many standard deviations a particle must be
 # above the Brownian mean in order to survive Brownian mean
 # straight line speed thresholding (activated above)
-brownian_multiplier: float = 2.0
+brownian_multiplier: float = 0.0
 
 # Just like do_speed_thresh, but for the displacement
 do_displacement_thresh: bool = False
@@ -104,9 +98,9 @@ do_linearity_thresh: bool = False
 # since error is higher on shorter tracks
 # If active, filters out any tracks w/ less than duration_threshold
 # frames.
-# do_duration_thresh: bool = True
+do_duration_thresh: bool = True
 duration_threshold: int = 65
-do_duration_thresh = False
+# do_duration_thresh = False
 
 # If not None, also save graphs and .csv files here
 secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
@@ -124,12 +118,12 @@ brownian_speed_threshold_fallback: float = 0.042114570268546765
 do_filter_scatter_plots: bool = True
 do_extra_filter_scatter_plots: bool = False
 
-# If true, saves a histogram of filtered datapoints for each file
+# If true, saves a histogram of filtered data points for each file
 save_filtering_data: bool = False
 
-##########################################################################################################
+####################################################################################################
 # End settings
-##########################################################################################################
+####################################################################################################
 
 '''
 Protocol overview from Dr. Boymelgreen
@@ -161,9 +155,6 @@ I noted that for the top 1khz, there was only 1 "outlier" in 3
 and in bottom 1kHz, there were none. I think that in general
 this should be true if the tracked data is good quality.
 
-'''
-
-'''
 Names which are not kept from the original .csv files:
 ['LABEL', 'TRACK_INDEX', 'TRACK_ID', 'NUMBER_SPOTS',
 'NUMBER_GAPS', 'NUMBER_SPLITS', 'NUMBER_MERGES', 'NUMBER_COMPLEX',
@@ -245,13 +236,15 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     the standard deviations.
     '''
 
-    global save_num, secondary_save_path
+    global save_num
     save_num += 1
+
+    csv: pd.DataFrame = pd.DataFrame()
 
     try:
         # Load file
         csv = pd.read_csv(name)
-    except:
+    except Exception:
         print('Failed to open', name)
         return ([None for _ in col_names] + [None, None], [None for _ in col_names])
 
@@ -437,7 +430,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 raw_list: [float] = row[1].astype(float).to_list()
 
-                for i in range(len(raw_list)):
+                for i, _ in enumerate(raw_list):
                     if raw_list[i] < mean_values[i] - (2 * std_values[i]):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
@@ -483,7 +476,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 raw_list: [float] = row[1].astype(float).to_list()
 
-                for i in range(len(raw_list)):
+                for i, _ in enumerate(raw_list):
                     if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
@@ -525,7 +518,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         output_data[i] = mean(csv[item].astype(float).to_list())
         output_std[i] = std(csv[item].astype(float).to_list())
 
-    for i in range(len(output_data)):
+    for i, _ in enumerate(output_data):
         if final_num_rows == 0:
             print('Warning! No tracks remain!')
             output_data[i] = None
@@ -571,7 +564,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         plt.close()
 
         dropped: pd.DataFrame = pd.DataFrame(dropped_row_indices, columns=[
-                                             'CSV_TRACK_ROW_NUMBER', 'MEAN_STRAIGHT_LINE_SPEED', 'REASON'])
+                                             'CSV_TRACK_ROW_NUMBER',
+                                             'MEAN_STRAIGHT_LINE_SPEED',
+                                             'REASON'])
         dropped.to_csv(name.replace('/', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
@@ -672,6 +667,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_name: str,
                            bar_column_name: str, file_name: (str | None) = None,
                            has_control: bool = False, override_ticks: [str] = None) -> bool:
+    '''
+    Create a column graph with bars.
+    '''
 
     if column_name not in table.columns or bar_column_name not in bar_table.columns:
         return False
@@ -743,11 +741,11 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
 # Everything above here is just meta stuff.
 if __name__ == '__main__':
     if folder == '' or folder is None:
-        if len(argv) != 1:
+        if len(sys.argv) != 1:
             if not silent:
                 print('Changing folder from arguments...')
 
-            chdir(argv[1])
+            chdir(sys.argv[1])
 
     else:
         chdir(folder)
@@ -762,7 +760,7 @@ if __name__ == '__main__':
 
     # Internal string representation of the frequencies
     names: [str] = name_fixer.fix_names(patterns)
-    has_control: bool = (names[0] is not None)
+    has_control: bool = names[0] is not None
 
     # Drop any files which do not exist
     names = [name for name in names if name is not None]
@@ -771,7 +769,8 @@ if __name__ == '__main__':
     if len(names) == 0:
         if not silent:
             print(
-                'Using fallback patterns; This could lead to picking up spots files instead of tracks.')
+                'Using fallback patterns; \
+                This could lead to picking up spots files instead of tracks.')
 
         names: [str] = name_fixer.fix_names(fallback_patterns)
         has_control: bool = (names[0] is not None)
@@ -798,8 +797,9 @@ if __name__ == '__main__':
                                                  0.0, 0.0, 0.0,
                                                  do_std_filter_flags,
                                                  do_iqr_filter_flags)
-            except:
-                print("ERROR DURING COLLECTION OF FILE", folder + sep + name)
+            except Exception:
+                print("ERROR DURING COLLECTION OF FILE",
+                      folder + sep + name)
                 array[i] = [None for i in range(len(array[i]))]
                 std_array[i] = [None for i in range(len(std_array[i]))]
 
@@ -1009,7 +1009,8 @@ if __name__ == '__main__':
                         'b' for _ in only_kept_y], sizes=[5 for _ in only_kept_x])
 
             plt.title(
-                'Post-Filter Straight Line Speed By Applied Frequency\n(Only tracks which WERE included in the final dataset appear here)')
+                'Post-Filter Straight Line Speed By Applied Frequency\n\
+                (Only tracks which WERE included in the final dataset appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
@@ -1029,7 +1030,8 @@ if __name__ == '__main__':
                         'b' for _ in only_lost_y], sizes=[5 for _ in only_lost_x])
 
             plt.title(
-                'Filtered Out Straight Line Speed By Applied Frequency\n(Only tracks which were NOT included in the final dataset appear here)')
+                'Filtered Out Straight Line Speed By Applied Frequency\n\
+                (Only tracks which were NOT included in the final dataset appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
@@ -1043,4 +1045,4 @@ if __name__ == '__main__':
     if not silent:
         print('Done.')
 
-    exit(0)
+    sys.exit(0)

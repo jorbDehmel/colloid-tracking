@@ -1,3 +1,9 @@
+'''
+Quick and dirty script to move files. Useful during the cleaning
+of poorly-human-formatted data into uniform script-analyzable
+data.
+'''
+
 import os
 import sys
 import shutil
