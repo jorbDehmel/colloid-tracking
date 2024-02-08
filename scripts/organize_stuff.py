@@ -4,12 +4,16 @@ filenames, then organize them into neat folders.
 '''
 
 import os
+import sys
 import shutil
 
 
-if __name__ == '__main__':
+def main() -> int:
+    '''
+    Main function
+    '''
 
-    for root, dirs, files in os.walk('.'):
+    for root, _, files in os.walk('.'):
         for file in files:
             if '/' not in root:
                 continue
@@ -36,3 +40,7 @@ if __name__ == '__main__':
 
                 print(f'From {root}/{file} to {new_name}')
                 shutil.move(root + '/' + file, new_name)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

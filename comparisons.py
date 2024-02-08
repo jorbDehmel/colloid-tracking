@@ -177,7 +177,7 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
                 name.replace('.csv', '_stds.csv')))
             files.append(temp)
 
-        except Exception:
+        except RuntimeError:
             pass
 
     # Graph set A (see above)

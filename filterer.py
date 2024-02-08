@@ -13,12 +13,7 @@ jedehmel@mavs.coloradomesa.edu
 
 TODO:
 - 8v, 12v, 120 um, 1 khz, bot+50
-  Why is this lower than it should be? I need to analyze this
-  (from meeting w/ sandeep)
-
-DONE:
-- 8v 120um 5 khz? where is it in graph? (regex issue)
-- wtf is up w/ my refiltered graphs? (all sorts of weird junk)
+  Why is this lower than it should be?
 '''
 
 # Import needed packages
@@ -232,7 +227,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     arrays of booleans. If the ith item is True, that column
     will be filtered such that only items which remain are those
     which are above 2 STD/IQR below the mean for their column.
-    Returns a duple containing the output data followed by
+    Returns a tuple containing the output data followed by
     the standard deviations.
     '''
 
@@ -244,7 +239,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     try:
         # Load file
         csv = pd.read_csv(name)
-    except Exception:
+    except RuntimeError:
         print('Failed to open', name)
         return ([None for _ in col_names] + [None, None], [None for _ in col_names])
 
@@ -297,7 +292,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if do_duration_thresh:
             for row in csv.iterrows():
                 # Must pass duration threshold
-                if float(row[1]['TRACK_DURATION']) < duration_threshold or float(row[1]['TRACK_DURATION']) != float(row[1]['TRACK_DURATION']):
+                if (float(row[1]['TRACK_DURATION']) < duration_threshold
+                        or float(row[1]['TRACK_DURATION']) != float(row[1]['TRACK_DURATION'])):
                     dropped_row_indices.append(
                         [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DURATION_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -306,9 +302,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if csv.shape[0] == 0:
             print('In file', name)
             print('Error! No items exceeded duration thresholding.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -337,9 +333,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if csv.shape[0] == 0:
             print('In file', name)
             print('Error! No items exceeded brownian speed thresholding.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -359,9 +355,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if csv.shape[0] == 0:
             print('In file', name)
             print('Error! No items exceeded brownian displacement thresholding.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -381,9 +377,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if csv.shape[0] == 0:
             print('In file', name)
             print('Error! No items exceeded brownian linearity thresholding.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -406,9 +402,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if csv.shape[0] == 0:
             print('In file', name)
             print('Error! No items exceeded quality thresholding.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -420,11 +416,13 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if std_drop_flags is not None:
             # Collect STD's for the requested items
             std_values: [float] = [
-                std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
+                std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0
+                for i, col_name in enumerate(csv.columns)]
 
             # Collect means
             mean_values: [float] = [
-                mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0 for i, col_name in enumerate(csv.columns)]
+                mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0
+                for i, col_name in enumerate(csv.columns)]
 
             # Iterate over rows, dropping if needed
             for row in csv.iterrows():
@@ -438,7 +436,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                         break
 
                     # Filter anything above, but ONLY if this is control
-                    elif speed_threshold == 0.0 and std_drop_flags[i] and raw_list[i] > mean_values[i] + (2 * std_values[i]):
+                    elif (speed_threshold == 0.0 and std_drop_flags[i]
+                            and raw_list[i] > mean_values[i] + (2 * std_values[i])):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -448,9 +447,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('In file', name)
             print(
                 'Error! No items survived brownian thresholding and standard deviation filtering.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
         csv = backup.copy(deep=True)
@@ -470,7 +469,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
             # Collect means
             mean_values: [float] = [
-                mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0 for col_name in csv.columns]
+                mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0
+                for col_name in csv.columns]
 
             # Iterate over rows, dropping if needed
             for row in csv.iterrows():
@@ -484,7 +484,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                         break
 
                     # Filter anything above, but ONLY if this is control
-                    elif speed_threshold == 0.0 and iqr_drop_flags[i] and raw_list[i] > mean_values[i] + (1.5 * iqr_values[i]):
+                    elif (speed_threshold == 0.0 and iqr_drop_flags[i]
+                            and raw_list[i] > mean_values[i] + (1.5 * iqr_values[i])):
                         dropped_row_indices.append(
                             [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
@@ -494,9 +495,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             print('In file', name)
             print(
                 'Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
-            raise Exception('Overfiltering Error')
+            raise RuntimeError('Overfiltering Error')
 
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         print('SEVERE WARNING! Reverting')
 
@@ -737,9 +738,14 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     return True
 
 
-# This is what will be executed when the script is run;
-# Everything above here is just meta stuff.
-if __name__ == '__main__':
+def main() -> int:
+    '''
+    This is what will be executed when the script is run;
+    Everything above here is just meta stuff.
+    '''
+
+    global folder, brownian_speed_threshold, brownian_displacement_threshold, quality_threshold, brownian_linearity_threshold
+
     if folder == '' or folder is None:
         if len(sys.argv) != 1:
             if not silent:
@@ -773,7 +779,7 @@ if __name__ == '__main__':
                 This could lead to picking up spots files instead of tracks.')
 
         names: [str] = name_fixer.fix_names(fallback_patterns)
-        has_control: bool = (names[0] is not None)
+        has_control: bool = names[0] is not None
 
         # Drop any files which do not exist
         names = [name for name in names if name is not None]
@@ -781,7 +787,7 @@ if __name__ == '__main__':
     # Exit if no names remain
     if len(names) == 0:
         print(folder)
-        raise Exception('No files could be found.')
+        raise RuntimeError('No files could be found.')
 
     # Output array for data
     array = zeros(shape=(len(names), len(col_names) + len(extra_columns)))
@@ -797,7 +803,7 @@ if __name__ == '__main__':
                                                  0.0, 0.0, 0.0,
                                                  do_std_filter_flags,
                                                  do_iqr_filter_flags)
-            except Exception:
+            except RuntimeError:
                 print("ERROR DURING COLLECTION OF FILE",
                       folder + sep + name)
                 array[i] = [None for i in range(len(array[i]))]
@@ -805,12 +811,10 @@ if __name__ == '__main__':
 
             end: float = time()
 
-            '''
-            col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
-                                'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
-                                'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
-                                'LINEARITY_OF_FORWARD_PROGRESSION']
-            '''
+            # col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
+            #                     'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
+            #                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
+            #                     'LINEARITY_OF_FORWARD_PROGRESSION']
 
             # Uses updated brownian standards:
             # In order to pass the filter, it must be more than 2 std from brownian
@@ -842,8 +846,8 @@ if __name__ == '__main__':
     if not silent:
         print('Generating output .csv file...')
 
-    trimmed_names: [str] = [item[:8] for item in names]
-    floated_names: [str] = [str(name_fixer.path_to_hz(item)) for item in names]
+    floated_names: List[str] = [
+        str(name_fixer.path_to_hz(item)) for item in names]
 
     out_csv: pd.DataFrame = pd.DataFrame(array,
                                          columns=(
@@ -948,7 +952,7 @@ if __name__ == '__main__':
 
         del temp
 
-        floated_names.sort(key=lambda x: float(x))
+        floated_names.sort(key=float)
 
         # Create actual scatter plot
         plt.clf()
@@ -989,7 +993,7 @@ if __name__ == '__main__':
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
+        plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
             'Kept ' + str(len(only_kept_x)) + ', Lost ' + str(len(only_lost_x))))
 
         if secondary_save_path is not None:
@@ -1045,4 +1049,8 @@ if __name__ == '__main__':
     if not silent:
         print('Done.')
 
-    sys.exit(0)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
