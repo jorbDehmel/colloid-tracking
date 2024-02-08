@@ -4,7 +4,6 @@ filenames, then organize them into neat folders.
 '''
 
 import os
-import sys
 import shutil
 
 

@@ -1,22 +1,10 @@
 #!/usr/bin/python3
 
-import numpy as np
-from matplotlib import pyplot as plt
-import pandas as pd
-import re
-import sys
-import os
-import reverser
-
-from typing import *
-
 '''
 This is a revision of my filter scripts wherein I attempt to
 simplify them as much as possible while still being rigorous.
 - Jordan Dehmel
-'''
 
-'''
 From Dr. Boymelgreen
 
 For each height:
@@ -45,8 +33,14 @@ To calculate the mobility under applied field
 I noted that for the top 1khz, there was only 1 "outlier" in 3
 and in bottom 1kHz, there were none. I think that in general
 this should be true if the tracked data is good quality.
-
 '''
+
+from typing import Union, List, Tuple
+import sys
+import numpy as np
+from matplotlib import pyplot as plt
+import pandas as pd
+import reverser
 
 
 # The variable to perform statistics on
@@ -62,7 +56,7 @@ filepaths: [str] = ['/home/jorb/data/Report/Top/0khztrackssexport.csv',
 frequencies: [float] = [0.0, 1000.0, 0.0, 1000.0]
 
 
-def display_means(means: [float], standard_deviations: [float], frequencies: [float]) -> None:
+def display_means(means: List[float], standard_deviations: List[float]) -> None:
     '''
     :param means: The mean (y) values to graph
     :param standard_deviations: The y error bars
@@ -87,7 +81,8 @@ def display_means(means: [float], standard_deviations: [float], frequencies: [fl
 
 def filter_single_file(filepath: str, is_brownian: bool,
                        brownian_mean: Union[float, None] = None,
-                       brownian_std: Union[float, None] = None) -> Tuple[pd.DataFrame, int, int, float, float]:
+                       brownian_std: Union[float, None] = None
+                       ) -> Tuple[pd.DataFrame, int, int, float, float]:
     '''
     :param filepath: The file path to load from
     :param is_brownian: True if this is a 0khz file, False otherwise
@@ -118,9 +113,8 @@ def filter_single_file(filepath: str, is_brownian: bool,
 
     # If not brownian, do pre-filtering as mentioned above
     if not is_brownian:
-
         if brownian_mean is None or brownian_std is None:
-            raise Exception(
+            raise RuntimeError(
                 'If a file is not Brownian, you must pass the Brownian values.')
 
         # Drop anything below 2 standard deviation above brownian
@@ -157,10 +151,15 @@ def filter_single_file(filepath: str, is_brownian: bool,
     reverser.display_kept_lost_scatterplot(file_backup, file, filepath)
 
     # Return values as designated above
-    return (file, initial_num_rows - num_rows_dropped, num_rows_dropped, filtered_mean, filtered_std)
+    return (file, initial_num_rows - num_rows_dropped,
+            num_rows_dropped, filtered_mean, filtered_std)
 
 
-if __name__ == '__main__':
+def main() -> int:
+    '''
+    Main function
+    '''
+
     # Initialize lists
     files: [pd.DataFrame] = [None for _ in range(len(filepaths))]
     rows_kept: [int] = [None for _ in range(len(filepaths))]
@@ -178,8 +177,9 @@ if __name__ == '__main__':
         if i == 0:
             continue
 
-        files[i], rows_kept[i], rows_dropped[i], means[i], standard_deviations[i] = filter_single_file(
+        to_unpack = filter_single_file(
             filepath, False, means[0], standard_deviations[0])
+        files[i], rows_kept[i], rows_dropped[i], means[i], standard_deviations[i] = to_unpack
 
         print(
             f'Kept {rows_kept[i]} of {rows_kept[i] + rows_dropped[i]} on file {filepath}')
@@ -189,10 +189,9 @@ if __name__ == '__main__':
     # Construct minimal .csv output file, for simplicities sake
     # A thorough output file can be generated via filterer.py
 
-    '''
-    Output .csv formatting:
-    FILEPATH,FREQUENCY,MEAN_STRAIGHT_LINE_SPEED,STRAIGHT_LINE_SPEED_STD,INITIAL_TRACK_COUNT,FILTERED_TRACK_COUNT,
-    '''
+    # Output .csv formatting:
+    # FILEPATH,FREQUENCY,MEAN_STRAIGHT_LINE_SPEED,STRAIGHT_LINE_SPEED_STD,
+    # INITIAL_TRACK_COUNT,FILTERED_TRACK_COUNT,
 
     headers: [str] = ['FILEPATH',
                       'FREQUENCY',
@@ -203,7 +202,7 @@ if __name__ == '__main__':
 
     # Build raw python array
     array: [[Union[str, float, int]]] = []
-    for i in range(len(filepaths)):
+    for i, _ in enumerate(filepaths):
         # Initialize row
         row: [Union[str, float, int]] = [0.0 for _ in headers]
 
@@ -223,4 +222,8 @@ if __name__ == '__main__':
     csv.to_csv('file_summary.csv')
 
     # Exit program without error
-    exit(0)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

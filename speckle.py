@@ -14,18 +14,28 @@ certain threshold if so desired.
 
 '''
 
+import sys
+from typing import List, Union, Tuple
+from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
-from typing import *
+
 
 class Track:
-    def __init__(self, x: List[float] = [], y: List[float] = [], f: List[float] = []):
+    '''
+    A class representing a track of a speckle-tracked particle.
+    '''
+
+    def __init__(self, x: List[float], y: List[float], f: List[float]):
         self.x_values: List[float] = x[:]
         self.y_values: List[float] = y[:]
         self.frames: List[int] = f[:]
 
     def append(self, x: float, y: float, t: int) -> None:
+        '''
+        Append a given point from speckle tracker
+        '''
+
         self.x_values.append(x)
         self.y_values.append(y)
         self.frames.append(t)
@@ -44,7 +54,7 @@ class Track:
 
         # Number of frames
         df: int = self.frames[-1] - self.frames[0]
-        
+
         return distance / df
 
     def mdts(self) -> float:
@@ -56,16 +66,19 @@ class Track:
             return 0.0
 
         # Create delta lists
-        dx: List[float] = [self.x_values[i + 1] - self.x_values[i] for i in range(len(self.x_values) - 1)]
-        dy: List[float] = [self.y_values[i + 1] - self.y_values[i] for i in range(len(self.y_values) - 1)]
+        dx: List[float] = [self.x_values[i + 1] - self.x_values[i]
+                           for i in range(len(self.x_values) - 1)]
+        dy: List[float] = [self.y_values[i + 1] - self.y_values[i]
+                           for i in range(len(self.y_values) - 1)]
 
         # Create distance traveled list
         assert len(dx) == len(dy)
-        distances: List[float] = [(dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
-        
+        distances: List[float] = [
+            (dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
+
         # Number of frames it existed
         df: int = self.frames[-1] - self.frames[0] + 1
-        
+
         return sum(distances) / df
 
     def mv(self) -> float:
@@ -77,14 +90,28 @@ class Track:
             return 0.0
 
         # Create delta lists
-        dx: List[float] = [self.x_values[i + 1] - self.x_values[i] for i in range(len(self.x_values) - 1)]
-        dy: List[float] = [self.y_values[i + 1] - self.y_values[i] for i in range(len(self.y_values) - 1)]
+        dx: List[float] = [self.x_values[i + 1] - self.x_values[i]
+                           for i in range(len(self.x_values) - 1)]
+        dy: List[float] = [self.y_values[i + 1] - self.y_values[i]
+                           for i in range(len(self.y_values) - 1)]
 
         # Create distance traveled list
         assert len(dx) == len(dy)
-        distances: List[float] = [(dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
-        
+        distances: List[float] = [
+            (dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
+
         return sum(distances) / len(distances)
+
+    def msd(self) -> float:
+        '''
+        Mean squared displacement
+        '''
+
+        # Get list of displacements
+
+        # Get sum of displacements squared
+
+        # Return sum over number of displacements
 
     def duration(self) -> int:
         '''
@@ -105,23 +132,18 @@ class Track:
         return distance
 
 
-'''
-Used for pixel resizing later. Change if these are not the
-dimensions of the data.
-
-original_w is the width in pixels of the source footage.
-processed_w is the width in pixels of the speckle-tracked footage.
-These may be different, as downsizing the footage for speckle tracking
-significantly improves speed.
-'''
+# Used for pixel resizing later. Change if these are not the
+# dimensions of the data.
+# original_w is the width in pixels of the source footage.
+# processed_w is the width in pixels of the speckle-tracked footage.
+# These may be different, as downsizing the footage for speckle tracking
+# significantly improves speed.
 original_w: int = 1028
 processed_w: int = 256
 
-'''
-If set to 0, does no duration thresholding. Otherwise,
-automatically drops any track w/ frame duration less than this
-value.
-'''
+# If set to 0, does no duration thresholding. Otherwise,
+# automatically drops any track w/ frame duration less than this
+# value.
 duration_threshold: int = 30
 
 
@@ -153,7 +175,7 @@ def process_file(input_filepath: str, spots_filepath: str,
     text = text.replace(',,', ',')
 
     # Save spots
-    with open(spots_filepath, 'w') as file:
+    with open(spots_filepath, 'w', encoding='utf8') as file:
         file.write(text)
 
     # If requested, save tracks
@@ -161,33 +183,34 @@ def process_file(input_filepath: str, spots_filepath: str,
 
         # Load data
         frame: pd.DataFrame = pd.read_csv(spots_filepath)
-    
-        tracks: List[Track] = []
-        cur_track: Track = Track()
-        i: int = 0
 
+        tracks: List[Track] = []
+        cur_track: Track = Track([], [], [])
+
+        is_first: bool = True
         for row in frame.iterrows():
-            if i == 0:
-                i += 1
+            if is_first:
+                is_first = False
                 continue
 
             if 'stop speckle' in row[0][0]:
                 tracks.append(cur_track)
             elif 'start speckle' in row[0][0]:
-                cur_track = Track()
+                cur_track = Track([], [], [])
             else:
-                cur_track.append(float(row[0][0]), float(row[0][1]), int(row[0][2]))
-
-            i += 1
+                cur_track.append(float(row[0][0]), float(
+                    row[0][1]), int(row[0][2]))
 
         # Remove tracks below the duration threshold
-        tracks = [track for track in tracks if track.duration() >= duration_threshold]
+        tracks = [track for track in tracks if track.duration() >=
+                  duration_threshold]
 
         # Process into array
         arr: List[List[Union[str, float, int]]] = []
         cur: List[Union[str, float, int]] = []
 
-        labels: List[str] = ['TRACK_INDEX', 'TRACK_DURATION', 'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED']
+        labels: List[str] = ['TRACK_INDEX', 'TRACK_DURATION',
+                             'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED']
 
         # And 3 dummy rows (see above)
         dummy: List[str] = ['_' for _ in labels]
@@ -196,11 +219,11 @@ def process_file(input_filepath: str, spots_filepath: str,
         arr.append(dummy)
 
         # Followed by real track data
-        for i, track in enumerate(tracks):
-            cur = [i,
-                   track.duration(),
-                   track.displacement() * adjustment_coefficient,
-                   track.sls() * adjustment_coefficient]
+        for k, cur_track in enumerate(tracks):
+            cur = [k,
+                   cur_track.duration(),
+                   cur_track.displacement() * adjustment_coefficient,
+                   cur_track.sls() * adjustment_coefficient]
 
             arr.append(cur)
 
@@ -209,18 +232,24 @@ def process_file(input_filepath: str, spots_filepath: str,
         df.to_csv(tracks_filepath)
 
 
-if __name__ == '__main__':
-    # Uncomment to demonstrate translation script for speckle data to tracks data
-    process_file('/home/jorb/data/120um_16v_speckles_clean/bot/analysis/1khz_speckles.csv', 'junk.csv', 'junk_tracks.csv', original_w / processed_w)
-    input_filepath = 'junk.csv'
+def main() -> int:
+    '''
+    Main function to be called if this is being used as a script
+    '''
 
-    frame: pd.DataFrame = pd.read_csv(input_filepath)
-    
+    # Uncomment to demonstrate translation script for speckle data to tracks data
+    # process_file('/home/jorb/data/120um_16v_speckles_clean/bot/analysis/1khz_speckles.csv',
+    #              'junk.csv', 'junk_tracks.csv', original_w / processed_w)
+
+    filepath: str = 'junk.csv'
+
+    dataframe: pd.DataFrame = pd.read_csv(filepath)
+
     tracks: List[Track] = []
-    cur_track: Track = Track()
+    cur_track: Track = Track([], [], [])
     i: int = 0
 
-    for row in frame.iterrows():
+    for row in dataframe.iterrows():
         if i == 0:
             i += 1
             continue
@@ -228,9 +257,10 @@ if __name__ == '__main__':
         if 'stop speckle' in row[0][0]:
             tracks.append(cur_track)
         elif 'start speckle' in row[0][0]:
-            cur_track = Track()
+            cur_track = Track([], [], [])
         else:
-            cur_track.append(float(row[0][0]), processed_w - float(row[0][1]), int(row[0][2]))
+            cur_track.append(
+                float(row[0][0]), processed_w - float(row[0][1]), int(row[0][2]))
 
         i += 1
 
@@ -264,20 +294,22 @@ if __name__ == '__main__':
     colors: List[str] = []
 
     for j, track in enumerate(tracks):
-        for i in range(len(track.x_values)):
+        for i, _ in enumerate(track.x_values):
             x_values.append(track.x_values[i])
             y_values.append(track.y_values[i])
 
             colors.append(all_colors[j % len(all_colors)])
 
-    print(f'Processed {len(tracks)} tracks with {sum([len(track.x_values) for track in tracks])} data points')
+    print(
+        f'Processed {len(tracks)} tracks with',
+        f'{sum(len(track.x_values) for track in tracks)} data points'
+    )
 
     plt.xlim((0, processed_w))
     plt.ylim((0, processed_w))
 
-
     plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
-    
+
     plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
     plt.scatter(x_values, y_values, c=colors, s=3.0)
 
@@ -286,13 +318,10 @@ if __name__ == '__main__':
     plt.title('Tracked Speckles (Scaled Down)')
     plt.xlabel('X Pixels')
     plt.ylabel('Y Pixels')
-    plt.savefig('tracked_speckles.png', bbox_extra_artists=(lgd,), bbox_inches='tight')
-    
-    plt.clf()
+    plt.savefig('tracked_speckles.png',
+                bbox_extra_artists=(lgd,), bbox_inches='tight')
 
-    '''
-    dx = dy = sqrt(2) * sls
-    '''
+    plt.clf()
 
     old_arrows: List[Tuple[float, float, float]] = []
     new_arrows: List[Tuple[float, float, float]] = []
@@ -300,7 +329,7 @@ if __name__ == '__main__':
     for track in tracks:
         new_arrows.append((track.x_values[0], track.y_values[0], track.sls()))
 
-    for i in range(len(old_sls)):
+    for i, _ in enumerate(old_sls):
         old_arrows.append((old_x[i], old_y[i], old_sls[i]))
 
     for arrow in old_arrows:
@@ -312,7 +341,8 @@ if __name__ == '__main__':
     plt.scatter(x_values, y_values, c=colors, s=3.0, alpha=0.1)
 
     plt.scatter(old_x, old_y, s=25.0, label='TrackMate')
-    plt.scatter([track.x_values[0] for track in tracks], [track.y_values[0] for track in tracks], s=25.0, label='Speckles')
+    plt.scatter([track.x_values[0] for track in tracks], [track.y_values[0]
+                for track in tracks], s=25.0, label='Speckles')
 
     plt.legend()
     plt.savefig('vectors.png')
@@ -331,36 +361,45 @@ if __name__ == '__main__':
                 [sls for sls in old_sls],
                 c='b', label='Mean Straight Line Speed (Manual)')
 
-    error_squared: List[float] = [abs(tracks[i].sls() - old_sls[i]) for i in range(min(len(tracks), len(old_sls)))]
+    error_squared: List[float] = [
+        abs(tracks[i].sls() - old_sls[i]) for i in range(min(len(tracks), len(old_sls)))]
     plt.scatter([i for i in range(len(error_squared))],
                 [err for err in error_squared],
                 c='y', label='Absolute Value of Error')
 
-    '''
-    plt.scatter([i for i in range(len(tracks))],
-                [track.mdts() for track in tracks],
-                c='b', label='Mean Distance Traveled Speed')
-    plt.scatter([i for i in range(len(tracks))],
-                [track.mv() for track in tracks],
-                c='g', label='Mean Instantaneous Velocity')
-    '''
+    # plt.scatter([i for i in range(len(tracks))],
+    #             [track.mdts() for track in tracks],
+    #             c='b', label='Mean Distance Traveled Speed')
+    # plt.scatter([i for i in range(len(tracks))],
+    #             [track.mv() for track in tracks],
+    #             c='g', label='Mean Instantaneous Velocity')
 
     sls_values: List[float] = [track.sls() for track in tracks]
     sls_mean: float = sum(sls_values) / len(sls_values)
     sls_std: float = np.std(sls_values)
 
-    plt.hlines(y=[sls_mean - sls_std, sls_mean, sls_mean + sls_std], xmin=0, xmax=len(tracks), colors=['k'], label='Mean SLS +- 1 STD')
-    
+    plt.hlines(y=[sls_mean - sls_std, sls_mean, sls_mean + sls_std],
+               xmin=0, xmax=len(tracks), colors=['k'], label='Mean SLS +- 1 STD')
+
     manual_mean: float = sum(old_sls) / len(old_sls)
     manual_std: float = np.std(old_sls)
 
-    plt.hlines(y=[manual_mean - manual_std, manual_mean, manual_mean + manual_std], xmin=0, xmax=len(tracks), colors=['r'], label='Manual Mean SLS +- 1 STD')
+    plt.hlines(y=[manual_mean - manual_std, manual_mean, manual_mean + manual_std],
+               xmin=0, xmax=len(tracks), colors=['r'], label='Manual Mean SLS +- 1 STD')
 
     plt.legend()
     plt.title('Speckle Velocities')
     plt.savefig('speckle_velocities.png')
 
-    print(f'Mean SLS: {sls_mean} processed pixels/frame, SLS STD: {sls_std} processed pixels/frame')
-    
+    print(
+        f'Mean SLS: {sls_mean} processed pixels/frame, SLS STD: {sls_std} processed pixels/frame')
+
     if original_w is not None:
-        print(f'Mean SLS: {(original_w / processed_w) * sls_mean} pixels/frame, SLS STD: {(original_w / processed_w) * sls_std} pixels/frame')
+        print(
+            f'Mean SLS: {(original_w / processed_w) * sls_mean}',
+            f'pixels/frame, SLS STD: {(original_w / processed_w) * sls_std} pixels/frame'
+        )
+
+
+if __name__ == '__main__':
+    sys.exit(main())

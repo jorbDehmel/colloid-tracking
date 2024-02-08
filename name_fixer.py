@@ -1,10 +1,5 @@
 #!/usr/bin/python3
 
-import re
-import os
-from typing import *
-
-
 '''
 Utilities for sweeping for filenames
 
@@ -14,8 +9,19 @@ If a pattern could not be found, the corresponding
 index in the output is None.
 '''
 
+import re
+import os
+from typing import List, Union
+import sys
 
-def fix_names(patterns: List[str], given_names: Union[List[str], None] = None) -> List[Union[str, None]]:
+
+def fix_names(patterns: List[str],
+              given_names: Union[List[str], None] = None
+              ) -> List[Union[str, None]]:
+    '''
+    Fix the given names
+    '''
+
     # Initialize output array
     out: List[Union[str, None]] = [None for _ in patterns]
 
@@ -39,8 +45,11 @@ def fix_names(patterns: List[str], given_names: Union[List[str], None] = None) -
     return out
 
 
-# Given a filepath, yields the number of HERTZ (not kilo)
 def path_to_hz(path: str) -> float:
+    '''
+    Given a filepath, yields the number of HERTZ (not kilo)
+    '''
+
     if 'control' in path or 'Control' in path:
         return 0.0
 
@@ -52,7 +61,7 @@ def path_to_hz(path: str) -> float:
     if path_temp.find('\\') != -1:
         path_temp = path_temp[path_temp.find('\\') + 1:]
 
-    in_khz: bool = (path.find('khz') != -1)
+    in_khz: bool = path.find('khz') != -1
 
     numbers: str = '0123456789.'
     i: int = 0
@@ -63,64 +72,77 @@ def path_to_hz(path: str) -> float:
     while path_temp[i] in numbers:
         i += 1
 
-    out: float = float(path_temp[:i])
+    output: float = float(path_temp[:i])
 
     if in_khz:
-        out *= 1000.0
+        output *= 1000.0
 
-    return out
+    return output
 
 
-# Find all filenames matching a given pattern
 def find_all(pattern: str) -> List[str]:
+    '''
+    Find all filenames matching a given pattern
+    '''
+
     # Initialize output array
-    out: List[Union[str, None]] = []
+    output: List[Union[str, None]] = []
 
     # Iterate
     for name in os.listdir():
         if re.search(pattern, name):
-            out.append(name)
+            output.append(name)
 
     # Return results
-    return out
+    return output
 
 
-# Find all filenames which match a given set of patterns
 def find_all_from_filters(filters: List[str], final_file_qualifier: str) -> List[str]:
+    '''
+    Find all filenames which match a given set of patterns
+    '''
+
     name_array: List[str] = find_all(filters[0])
 
-    for filter in filters[1:]:
-        temp: List[str] = find_all(filter)
+    for filter_item in filters[1:]:
+        temp: List[str] = find_all(filter_item)
 
         name_array = [name for name in name_array if name in temp]
 
         if len(name_array) == 0:
             break
 
-    name_array = [name for name in name_array if re.search(final_file_qualifier, name) is not None]
+    name_array = [name for name in name_array if re.search(
+        final_file_qualifier, name) is not None]
 
     return name_array
 
-# Find all filenames matching a given pattern
-# AND search subfolders
+
 def find_all_recursive(pattern: str) -> List[str]:
+    '''
+    Find all filenames matching a given pattern
+    AND search subfolders
+    '''
+
     # Initialize output array
-    out: List[Union[str, None]] = []
+    output: List[Union[str, None]] = []
 
     # Iterate
     for root, _, filenames in os.walk(os.getcwd()):
         for filename in filenames:
             name = root + os.sep + filename
             if re.search(pattern, name):
-                out.append(name)
+                output.append(name)
 
     # Return results
-    return out
-
-# Gets the cleaned cwd as a string
+    return output
 
 
 def get_cwd() -> str:
+    '''
+    Gets the cleaned cwd as a string
+    '''
+
     out: str = os.getcwd()
 
     out = out.replace('/', '_')
@@ -131,13 +153,20 @@ def get_cwd() -> str:
     return out
 
 
-if __name__ == '__main__':
+def main() -> int:
+    '''
+    The main function to be called when this is being
+    run as a script.
+    '''
+
     patterns: List[str] = ['(^0 ?khz|control)', '(0.8 ?khz|800 ?khz)',
-                       '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
-                       '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz']
+                           '^1 ?khz', '^10 ?khz', '^25 ?khz', '^50 ?khz',
+                           '^75 ?khz', '^100 ?khz', '^150 ?khz', '^200 ?khz']
 
-    out = fix_names(patterns)
+    output_value = fix_names(patterns)
 
-    print(out)
+    print(output_value)
 
-    pass
+
+if __name__ == '__main__':
+    sys.exit(main())
