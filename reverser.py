@@ -424,16 +424,6 @@ def graph_relative(data_in: List[float],
         plt.savefig(save_path)
 
 
-def display_kept_lost_scatterplot(pre: pd.DataFrame, post: pd.DataFrame, name: str,
-                                  brownian_speed_threshold: float = None) -> None:
-    '''
-    :param pre: The full Pandas DataFrame before any filtering
-    :param post: The output Pandas DataFrame after all filtering
-    :param name: The input filename
-    :return: None
-    '''
-
-
 def display_kept_lost_histogram(pre: pd.DataFrame, post: pd.DataFrame, name: str,
                                 brownian_speed_threshold: float = None) -> None:
     '''

@@ -3,7 +3,6 @@ __pycache__/
 filtering/
 scatters/
 .vscode/
-test*/
 perm/
 refiltered/
 .mypy_cache/
@@ -11,3 +10,4 @@ tk
 *.png
 *.csv
 *.pickle
+*.avi

@@ -1,126 +1,13 @@
 #!/usr/bin/python3
 
 '''
-Main particle filtering utilities
-
 This file is what you will use if you want "fancier" filtering
 and utilities, like error handling and automatic file detection
 given a folder.
 
 Jordan Dehmel, 2023
-jdehmel@outlook.com
 jedehmel@mavs.coloradomesa.edu
 
-TODO:
-- 8v, 12v, 120 um, 1 khz, bot+50
-  Why is this lower than it should be?
-'''
-
-# Import needed packages
-import sys
-from time import time
-from typing import List, Tuple
-from os import chdir, getcwd, sep
-
-import pandas as pd
-import matplotlib.pyplot as plt
-from numpy import zeros, mean, std, percentile
-
-import name_fixer
-
-####################################################################################################
-# Begin settings
-# See docs/project_overview.pdf for a thorough explanation of each of these.
-####################################################################################################
-
-
-# Put the folder you want to operate on into this string
-folder: str = ''
-
-'''
-# Refer to this list when modifying do_std_filter_flags
-# or do_iqr_filter_flags
-
-col_names = ['TRACK_DISPLACEMENT',
-             'TRACK_MEAN_SPEED',
-             'TRACK_MEDIAN_SPEED',
-             'TRACK_MEAN_QUALITY',
-             'TOTAL_DISTANCE_TRAVELED',
-             'MEAN_STRAIGHT_LINE_SPEED',
-             'LINEARITY_OF_FORWARD_PROGRESSION']
-'''
-
-# Flags for which -2 * STD filters to apply
-# A False in the first position means it will not apply STD filters
-# to the first item in col_names, in this case 'TRACK_DISPLACEMENT'.
-# If it were True instead, it will do that filtering.
-# do_std_filter_flags: [bool] = [False, False, False, False, False, True, False]
-do_std_filter_flags = None
-
-# Flags for which -1.5 * IQR filters to apply
-# This works just like above. If it is equal to None, it does none
-# of these filters
-do_iqr_filter_flags: [bool] = None
-
-# If true, filters any particles whose quality (as measured by
-# imagej) is below the given percentile
-do_quality_percentile_filter: bool = False
-quality_percentile_filter: float = 50.0
-
-# Conversion from pixels/frame to um/s
-conversion: float = 4 * 0.32
-
-# Tends to work well
-# Activates the brownian straight-line-speed threshold filter
-# If active, removes any particle below Brownian mean
-# straight-line-speed
-do_speed_thresh: bool = True
-# do_speed_thresh = False
-
-# Determines how many standard deviations a particle must be
-# above the Brownian mean in order to survive Brownian mean
-# straight line speed thresholding (activated above)
-brownian_multiplier: float = 0.0
-
-# Just like do_speed_thresh, but for the displacement
-do_displacement_thresh: bool = False
-
-# Just like do_speed_thresh, but for the particle linearity
-# (as measured by imagej)
-do_linearity_thresh: bool = False
-
-# For filtering tracks which are too short to be meaningful
-# since error is higher on shorter tracks
-# If active, filters out any tracks w/ less than duration_threshold
-# frames.
-do_duration_thresh: bool = True
-duration_threshold: int = 65
-# do_duration_thresh = False
-
-# If not None, also save graphs and .csv files here
-secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
-
-# If true, will only print warnings and errors
-silent: bool = True
-
-# If true, uses the given brownian speed fallback when no
-# brownian file can be detected. This should not be an issue,
-# so long as the regular expressions match the Brownian file.
-do_speed_thresh_fallback: bool = False
-brownian_speed_threshold_fallback: float = 0.042114570268546765
-
-# Turns on or off extra graphs
-do_filter_scatter_plots: bool = True
-do_extra_filter_scatter_plots: bool = False
-
-# If true, saves a histogram of filtered data points for each file
-save_filtering_data: bool = False
-
-####################################################################################################
-# End settings
-####################################################################################################
-
-'''
 Protocol overview from Dr. Boymelgreen
 
 For each height:
@@ -150,18 +37,102 @@ I noted that for the top 1khz, there was only 1 "outlier" in 3
 and in bottom 1kHz, there were none. I think that in general
 this should be true if the tracked data is good quality.
 
-Names which are not kept from the original .csv files:
-['LABEL', 'TRACK_INDEX', 'TRACK_ID', 'NUMBER_SPOTS',
-'NUMBER_GAPS', 'NUMBER_SPLITS', 'NUMBER_MERGES', 'NUMBER_COMPLEX',
-'LONGEST_GAP', 'TRACK_DURATION', 'TRACK_START', 'TRACK_STOP',
-'TRACK_X_LOCATION', 'TRACK_Y_LOCATION', 'TRACK_Z_LOCATION',
-'TRACK_MAX_SPEED', 'TRACK_MIN_SPEED', 'TRACK_STD_SPEED',
-'MAX_DISTANCE_TRAVELED', 'CONFINEMENT_RATIO',
-'MEAN_DIRECTIONAL_CHANGE_RATE']
+Refer to this list when modifying do_std_filter_flags
+or do_iqr_filter_flags.
+
+col_names = ['TRACK_DISPLACEMENT',
+             'TRACK_MEAN_SPEED',
+             'TRACK_MEDIAN_SPEED',
+             'TRACK_MEAN_QUALITY',
+             'TOTAL_DISTANCE_TRAVELED',
+             'MEAN_STRAIGHT_LINE_SPEED',
+             'LINEARITY_OF_FORWARD_PROGRESSION']
 '''
 
-# Everything beyond this point should not be changed unless it
-# is for a bug fix.
+# Import needed packages
+import sys
+from time import time
+from typing import List, Tuple, Union
+from os import chdir, getcwd, sep
+import pandas as pd
+import matplotlib.pyplot as plt
+from numpy import zeros, mean, std, percentile
+import name_fixer
+
+####################################################################################################
+# Begin settings; See docs/project_overview.pdf for a thorough explanation of each of these.
+####################################################################################################
+
+
+# Put the folder you want to operate on into this string
+folder: str = ''
+
+# Flags for which -2 * STD filters to apply
+# A False in the first position means it will not apply STD filters
+# to the first item in col_names, in this case 'TRACK_DISPLACEMENT'.
+# If it were True instead, it will do that filtering.
+do_std_filter_flags: Union[List[bool], None] = None
+
+# Flags for which -1.5 * IQR filters to apply
+# This works just like above. If it is equal to None, it does none
+# of these filters
+do_iqr_filter_flags: Union[List[bool], None] = None
+
+# If true, filters any particles whose quality (as measured by
+# imagej) is below the given percentile
+do_quality_percentile_filter: bool = False
+quality_percentile_filter: float = 50.0
+
+# Conversion from pixels/frame to um/s
+conversion: float = 4 * 0.32
+
+# Tends to work well
+# Activates the brownian straight-line-speed threshold filter
+# If active, removes any particle below Brownian mean
+# straight-line-speed
+do_speed_thresh: bool = True
+
+# Determines how many standard deviations a particle must be
+# above the Brownian mean in order to survive Brownian mean
+# straight line speed thresholding (activated above)
+brownian_multiplier: float = 0.0
+
+# Just like do_speed_thresh, but for the displacement
+do_displacement_thresh: bool = False
+
+# Just like do_speed_thresh, but for the particle linearity
+# (as measured by imagej)
+do_linearity_thresh: bool = False
+
+# For filtering tracks which are too short to be meaningful
+# since error is higher on shorter tracks
+# If active, filters out any tracks w/ less than duration_threshold
+# frames.
+do_duration_thresh: bool = True
+duration_threshold: int = 65
+
+# If not None, also save graphs and .csv files here
+secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
+
+# If true, will only print warnings and errors
+silent: bool = True
+
+# If true, uses the given brownian speed fallback when no
+# brownian file can be detected. This should not be an issue,
+# so long as the regular expressions match the Brownian file.
+do_speed_thresh_fallback: bool = False
+brownian_speed_threshold_fallback: float = 0.042114570268546765
+
+# Turns on or off extra graphs
+do_filter_scatter_plots: bool = True
+do_extra_filter_scatter_plots: bool = False
+
+# If true, saves a histogram of filtered data points for each file
+save_filtering_data: bool = False
+
+####################################################################################################
+# End settings
+####################################################################################################
 
 # Column names which will be kept from the original .csv file
 col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
@@ -811,11 +782,6 @@ def main() -> int:
 
             end: float = time()
 
-            # col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
-            #                     'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
-            #                     'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
-            #                     'LINEARITY_OF_FORWARD_PROGRESSION']
-
             # Uses updated brownian standards:
             # In order to pass the filter, it must be more than 2 std from brownian
             brownian_speed_threshold = array[0][5] + \
@@ -867,14 +833,6 @@ def main() -> int:
         std_csv.to_csv(secondary_save_path + '/' +
                        name_fixer.get_cwd() + 'track_data_summary_stds.csv')
 
-    # if not silent:
-    #     print('Generating graphs...')
-
-    # for column_name in col_names:
-    #     graph_column_with_bars(
-    #         out_csv, std_csv, column_name, column_name + '_STD',
-    #         has_control=has_control)
-
     plt.clf()
     plt.rc('font', size=6)
 
@@ -889,23 +847,6 @@ def main() -> int:
         plt.savefig(secondary_save_path + '/TRACK_COUNT.png')
 
     plt.close()
-
-    # graph_relative(
-    #     out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
-    #     '10000.0',
-    #     floated_names,
-    #     'MEAN_STRAIGHT_LINE_SPEED',
-    #     'RELATIVE_SLS.png',
-    #     ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
-
-    # if secondary_save_path is not None:
-    #     graph_relative(
-    #         out_csv['MEAN_STRAIGHT_LINE_SPEED'].astype(float).to_list(),
-    #         '10000.0',
-    #         floated_names,
-    #         'MEAN_STRAIGHT_LINE_SPEED',
-    #         secondary_save_path + '/' + name_fixer.get_cwd() + '_RELATIVE_SLS.png',
-    #         ('Applied Frequency (Hertz)', 'Relative Mean Straight Line Speed (Pixels / Frame)'))
 
     if do_filter_scatter_plots:
         everything_labels: [str] = [

@@ -11,10 +11,12 @@ Mean Distance Traveled Speed = sum(magnitude(velocities)) / number of frames
 
 Capable of dropping any speckle track w/ duration under a
 certain threshold if so desired.
-
 '''
 
+from re import match
 import sys
+import os
+import subprocess
 from typing import List, Union, Tuple
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -102,17 +104,6 @@ class Track:
 
         return sum(distances) / len(distances)
 
-    def msd(self) -> float:
-        '''
-        Mean squared displacement
-        '''
-
-        # Get list of displacements
-
-        # Get sum of displacements squared
-
-        # Return sum over number of displacements
-
     def duration(self) -> int:
         '''
         Number of frames the track existed for
@@ -145,6 +136,71 @@ processed_w: int = 256
 # automatically drops any track w/ frame duration less than this
 # value.
 duration_threshold: int = 30
+
+
+def for_each_file(apply, folder: str = '.', matching: str = '.*') -> None:
+    '''
+    For each file recursively in `folder` which
+    matches the given RegEx `matching`, apply the given
+    function.
+
+    :param apply: The function / lambda to call on a match.
+    :param folder: The folder to recursively walk.
+    :param matching: The RegEx pattern which designates a match.
+    '''
+
+    # Walk all files recursively in the current directory
+    for root, dirnames, files in os.walk(folder):
+
+        # For each file (not directory) in the cwd
+        for file in files:
+            if match(matching, root + '/' + file):
+                apply(root + '/' + file)
+
+
+def for_each_dir(apply, folder: str = '.', matching: str = '.*') -> None:
+    '''
+    For each directory recursively in `folder` which
+    matches the given RegEx `matching`, apply the given
+    function.
+
+    :param apply: The function / lambda to call on a match.
+    :param folder: The folder to recursively walk.
+    :param matching: The RegEx pattern which designates a match.
+    '''
+
+    # Walk all files recursively in the current directory
+    for root, dirnames, _ in os.walk(folder):
+
+        # For each directory in the cwd
+        for dir_name in dirnames:
+            if match(matching, root + '/' + dir_name):
+                apply(root + '/' + dir_name)
+
+
+def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> None:
+    '''
+    Uses `ffmpeg` to re-encode and downscale a given
+    avi file for compatability w/ speckle tracker. This should
+    be used on all avi files before analysis to avoid long wait
+    times.
+
+    :param to_format_filepath: The input avi file to process.
+    :param save_filepath: The place to save the file after processing.
+    '''
+
+    assert to_format_filepath[-4:] == '.avi'
+    assert save_filepath[-4:] == '.avi'
+
+    # Run command to encode and downscale the given file,
+    # with the output being saved at the desired location.
+    subprocess.run([
+        'ffmpeg', '-i', to_format_filepath, '-c:v', 'mjpeg',
+        '-vf', 'scale=-2:' + str(processed_w), save_filepath
+    ], check=True)
+
+    print(f'File {to_format_filepath} was re-encoded as mjpeg and',
+          f'resized to {processed_w} pixels, with the result saved at {save_filepath}')
 
 
 def process_file(input_filepath: str, spots_filepath: str,
