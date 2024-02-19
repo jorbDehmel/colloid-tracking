@@ -2,7 +2,7 @@ FROM python:3
 
 ARG DOCKER_USER=default_user
 
-RUN apt update && apt upgrade && apt install -y git
+RUN apt update && apt upgrade -y && apt install -y git
 
 RUN adduser ${DOCKER_USER}
 USER $DOCKER_USER
