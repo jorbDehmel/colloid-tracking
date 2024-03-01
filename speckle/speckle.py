@@ -195,7 +195,7 @@ def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> Non
     # Run command to encode and downscale the given file,
     # with the output being saved at the desired location.
     subprocess.run([
-        'ffmpeg', '-i', to_format_filepath, '-c:v', 'mjpeg',
+        'ffmpeg', '-y', '-i', to_format_filepath, '-c:v', 'mjpeg',
         '-vf', 'scale=-2:' + str(processed_w), save_filepath
     ], check=True)
 

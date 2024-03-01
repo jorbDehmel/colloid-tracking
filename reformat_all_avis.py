@@ -33,12 +33,12 @@ def main(args: List[str]) -> int:
         if '_rf.avi' in what:
             return
 
-        # speckle.reformat_avi(what, what + '_rf.avi')
+        speckle.reformat_avi(what, what + '_rf.avi')
 
         if BACKUP_AVI_FOLDER:
 
             mangled_name: str = what.replace(
-                ' ', '_').replace('/', '_').replace('.', '_').lower() + '.avi'
+                ' ', '_').replace('/', '_').lower() + '.avi'
 
             shutil.copy(what + '_rf.avi', BACKUP_AVI_FOLDER +
                         '/' + mangled_name)

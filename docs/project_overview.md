@@ -6,9 +6,19 @@ This document outlines each of the included files, how to use them, and what the
 
 These filters should be stable and Windows-compatible, but they have been tested on a machine running Arch Linux. If a bug is found, report it to jedehmel@mavs.coloradomesa.edu.
 
-Jordan Dehmel, 2023,
+Jordan Dehmel, 2023 - present,
 jdehmel@outlook.com or
 jedehmel@mavs.coloradomesa.edu
+
+## Workflow
+
+1) Receive raw `*.avi` files from FIU via Globus
+2) Re-encode and downscale these using `python3 reformat_all_avis.py /path/to/avis`
+3) Re-organize output files from previous step
+4) Use speckle tracker to analyse organized files, output speckle files
+5) Change output speckle files to track files using Python scripts
+6) Use track file resources to extract velocities and whatnot
+7) Use local graphing resources to visualize data
 
 ## `simple.py`
 
