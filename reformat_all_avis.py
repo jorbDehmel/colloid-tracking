@@ -1,5 +1,7 @@
 '''
 Reformat all *.avi files recursively in the specified directory.
+Unless you know what you're doing, you do not want to modify
+anything outside of the `settings` section.
 '''
 
 import sys
@@ -7,9 +9,17 @@ import shutil
 from typing import List
 from speckle import speckle
 
-# A constant folder to copy all avi files to after formatting.
-# The names will be mangled when pasted here for disambiguation.
-BACKUP_AVI_FOLDER: str = '/home/jorb/Programs/physicsScripts/dump'
+################################################################
+# Begin Settings
+################################################################
+
+speckle.original_w = 1024   # The original width of the video
+speckle.processed_w = 512   # The target width of the video
+speckle.encoding = 'mjpeg'  # The (ImageJ compatible) encoding
+
+################################################################
+# End Settings
+################################################################
 
 
 def main(args: List[str]) -> int:
@@ -21,6 +31,14 @@ def main(args: List[str]) -> int:
     :returns: 0 upon success, error code upon failure.
     '''
 
+    if len(args) != 3:
+        raise ValueError('Exactly two command line arguments must be provided:',
+            'The place to save output, and the folder to operate on.')
+
+    # A constant folder to copy all avi files to after formatting.
+    # The names will be mangled when pasted here for disambiguation.
+    backup_avi_folder = args[1]
+
     def reformat_avi_file(what: str) -> None:
         '''
         The function which operates on a single *.avi file. This
@@ -30,26 +48,31 @@ def main(args: List[str]) -> int:
         :returns: Nothing.
         '''
 
+        # Skip files which have already been done
         if '_rf.avi' in what:
             return
 
+        # Downsize and re-encode the given file. Saves w/ a `_rf.avi` suffix
+        # for `reformatted`.
         speckle.reformat_avi(what, what + '_rf.avi')
 
-        if BACKUP_AVI_FOLDER:
+        # This includes the fully-qualified system path of a file
+        # in its copied name, allowing disambiguation later on.
+        # This is called both "mangling" and "name disambiguation".
+        mangled_name: str = what.replace(
+            ' ', '_').replace('/', '_').replace('\\', '_').lower() + '.avi'
 
-            mangled_name: str = what.replace(
-                ' ', '_').replace('/', '_').lower() + '.avi'
+        # Copy the mangled name to the backup folder.
+        shutil.copy(what + '_rf.avi', backup_avi_folder +
+                    '/' + mangled_name)
 
-            shutil.copy(what + '_rf.avi', BACKUP_AVI_FOLDER +
-                        '/' + mangled_name)
+    # Run w/ given parameters
+    speckle.for_each_file(reformat_avi_file, args[2], r'.*\.avi')
 
-    if len(args) > 1:
-        speckle.for_each_file(reformat_avi_file, args[1], r'.*\.avi')
-    else:
-        raise RuntimeError('No working directory was provided.')
-
+    # Return 0, indicating no error.
     return 0
 
 
+# Run the script
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

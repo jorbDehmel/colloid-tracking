@@ -1,6 +1,6 @@
 # Project Overview
 
-This repository contains code for the filtering of data surrounding the motion of Colloids, given that the data has been extracted via ImageJ and TrackMate. These files aim to provide accurate filtering, as well as reasonable automation.
+This repository contains code for the filtering of data surrounding the motion of Colloids, given that the data has been extracted via ImageJ and Speckle TrackerJ. These files aim to provide accurate filtering, as well as reasonable automation.
 
 This document outlines each of the included files, how to use them, and what they do. All code herein uses Python type hinting, which may be unfamiliar. If code modification is needed and this is unfamiliar, refer [here](https://docs.python.org/3/library/typing.html) (or contact me at jedehmel@mavs.coloradomesa.edu).
 
@@ -16,6 +16,39 @@ jedehmel@mavs.coloradomesa.edu
 2) Re-encode and downscale these using `python3 reformat_all_avis.py /path/to/avis`
 3) Re-organize output files from previous step
 4) Use speckle tracker to analyse organized files, output speckle files
+    1) Open `Fiji` or `ImageJ`
+    2) Open a file explorer
+    3) Drag the downsized file into `Fiji` / `ImageJ`. An `AVI Reader` window should pop up
+    4) Make sure that `Convert to Grayscale` is checked, and `Use Virtual Stack` is **not** checked
+    5) Click `OK` to exit the `AVI Reader` window. A preview window should open
+    6) Click `Plugins` -> `Speckle TrackerJ` to open the speckle tracker window
+    7) Use `+` and `-` to adjust the zoom
+    8) Click `models` -> `Adjust Parameters`
+        - The two relavent parameters are `Intensity factor` and `Search Size`
+        - Lower on either of these makes this go faster, but can cause artifacts
+        - For `512x512` pixel videos, `4.0` search size is good enough
+        - If you leave it on `12.0` pixels, it will take forever
+        - If you notice major tracking issues, adjust parameters
+    9) Click `Accept` to go back to the tracking window
+    10) Click `locate` -> `Locate Speckles` to open the speckle finding window
+    11) Adjust `threshold` until all good particles are selected
+    12) Optionally, adjust `minimum distance` to eliminate clusters
+    13) Click `Accept` to go back to the tracking window
+    14) Click `track` -> `Auto-track All`
+        - If this takes longer than 30 seconds, adjust parameters
+        - For `512x512` pixel videos on a medium-grade computer, this takes ~1 second is parameters are correct
+    15) Scrub around the video using the left and right arrow keys
+    16) Switch between tracking models using the up and down arrow keys
+    17) Select a track by clicking on it
+        - After selection, you can delete the track w/ `d`
+        - You can auto-track the selected speckle track w/ `a`
+        - You can manually select the next position w/ `t`
+    18) Make sure no conjoined colloids remain in the final data
+    19) Make sure particles are not too jittery
+    20) Make sure particles are in frame for long enough to get good readings
+    21) When done, click `File` -> `Save Speckles` and save wherever you the downsized video file is
+    22) Close the speckle tracking window, then close the preview window
+    23) Repeat on next video
 5) Change output speckle files to track files using Python scripts
 6) Use track file resources to extract velocities and whatnot
 7) Use local graphing resources to visualize data
@@ -33,6 +66,14 @@ You can change the following items in this file.
  * `frequencies` This is a list of the frequencies in Hertz which were applied. The first entry should correspond to the first filepath in `filepaths`, and so on.
 
 If these variables are properly set, the protocol listed at the head of `simple.py` will be executed. However, overfiltering is likely to be an issue, and this program does not have the capability to recover from that.
+
+## `bulk_rename.py`
+
+This script takes one command-line argument: The folder to rename. This is to be used after the automated reorganization of output files. It strips artifacts of name disambiguation, like `.avi.avi`.
+
+## `reformat_all_avis.py`
+
+This script takes two command-line arguments: The first is the directory inside which to save a copy of the reformatted `avi` files, and the second is the directory to recursively search for said files. It will iterate through all the subfolders of this second argument, re-encoding and re-sizing all `*.avi` files that it finds. It will also save a copy of this output file in the output directory specified in the first argument. This script will save the reformatted videos in their original location and in the output folder. **It will *not* overwrite the original files.** When saved in the output folder, the names will be disambiguated to include their fully-qualified path.
 
 ## `filterer.py`
 

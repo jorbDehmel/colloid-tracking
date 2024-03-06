@@ -132,6 +132,8 @@ class Track:
 original_w: int = 1028
 processed_w: int = 256
 
+encoding: str = 'mjpeg'
+
 # If set to 0, does no duration thresholding. Otherwise,
 # automatically drops any track w/ frame duration less than this
 # value.
@@ -150,7 +152,7 @@ def for_each_file(apply, folder: str = '.', matching: str = '.*') -> None:
     '''
 
     # Walk all files recursively in the current directory
-    for root, dirnames, files in os.walk(folder):
+    for root, _, files in os.walk(folder):
 
         # For each file (not directory) in the cwd
         for file in files:
@@ -195,7 +197,7 @@ def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> Non
     # Run command to encode and downscale the given file,
     # with the output being saved at the desired location.
     subprocess.run([
-        'ffmpeg', '-y', '-i', to_format_filepath, '-c:v', 'mjpeg',
+        'ffmpeg', '-y', '-i', to_format_filepath, '-c:v', encoding,
         '-vf', 'scale=-2:' + str(processed_w), save_filepath
     ], check=True)
 

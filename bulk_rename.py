@@ -33,6 +33,9 @@ def main(args: List[str]) -> int:
         """
         Cleans up an avi file"s name once it has been
         moved into the correct place.
+
+        Attempts to erase evidence of name mangling from
+        previous scripts.
         """
 
         try:
