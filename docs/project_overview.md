@@ -13,8 +13,11 @@ jedehmel@mavs.coloradomesa.edu
 ## Workflow
 
 1) Receive raw `*.avi` files from FIU via Globus
-2) Re-encode and downscale these using `python3 reformat_all_avis.py /path/to/avis`
+2) Re-encode and downscale these using `python3 reformat_all_avis.py /where/to/save /path/to/avis`
+    - This will save copies of the downsized videos both in the original folder and in the `/where/to/save` folder
 3) Re-organize output files from previous step
+    - Divide by particle size, voltage, chamber height, etc.
+    - This is the dataset we will be using for the remainder of this guide
 4) Use speckle tracker to analyse organized files, output speckle files
     1) Open `Fiji` or `ImageJ`
     2) Open a file explorer
