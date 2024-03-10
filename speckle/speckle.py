@@ -122,6 +122,13 @@ class Track:
 
         return distance
 
+    def msd(self) -> float:
+        '''
+        Return the mean squared displacement for this particle.
+
+        :returns: The mean-squared displacement of the particle.
+        '''
+
 
 # Used for pixel resizing later. Change if these are not the
 # dimensions of the data.

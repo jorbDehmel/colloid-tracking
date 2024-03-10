@@ -41,6 +41,8 @@ def main() -> int:
                 print(f'From {root}/{file} to {new_name}')
                 shutil.move(root + '/' + file, new_name)
 
+    return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())

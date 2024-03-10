@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 '''
 Utilities for sweeping for filenames
 
@@ -11,15 +9,23 @@ index in the output is None.
 
 import re
 import os
-from typing import List, Union
+from typing import List, Union, Optional
 import sys
 
 
 def fix_names(patterns: List[str],
-              given_names: Union[List[str], None] = None
-              ) -> List[Union[str, None]]:
+              given_names: Optional[List[str]] = None
+              ) -> List[Optional[str]]:
     '''
-    Fix the given names
+    Fix the given names.
+
+    :param patterns: The name patterns to match items to.
+    :param given_names: The candidates to be matched to
+        patterns. If None, uses all items in the current
+        directory.
+    :returns: A list of names where the i-th item corresponds to
+        the found name for the i-th pattern. If no item was
+        found for a given item, it is left as None.
     '''
 
     # Initialize output array
@@ -31,14 +37,17 @@ def fix_names(patterns: List[str],
             for i, pattern in enumerate(patterns):
                 if out[i] is not None:
                     continue
-                elif re.search(pattern, name) and name[-4:] == '.csv' and name[0] != '_':
+
+                if re.search(pattern, name) and name[-4:] == '.csv' and name[0] != '_':
                     out[i] = name
+
     else:
         for name in given_names:
             for i, pattern in enumerate(patterns):
                 if out[i] is not None:
                     continue
-                elif re.search(pattern, name) and name[-4:] == '.csv':
+
+                if re.search(pattern, name) and name[-4:] == '.csv':
                     out[i] = name
 
     # Return results
@@ -47,7 +56,10 @@ def fix_names(patterns: List[str],
 
 def path_to_hz(path: str) -> float:
     '''
-    Given a filepath, yields the number of HERTZ (not kilo)
+    Given a filepath, yields the number of HERTZ (not khz).
+
+    :param path: The filepath in question.
+    :returns: The applied frequency in hertz.
     '''
 
     if 'control' in path or 'Control' in path:
@@ -82,11 +94,16 @@ def path_to_hz(path: str) -> float:
 
 def find_all(pattern: str) -> List[str]:
     '''
-    Find all filenames matching a given pattern
+    Find all filenames matching a given pattern in the current
+    directory.
+
+    :param pattern: A regex pattern for the desired file(s).
+    :returns: All files in `./*` which match the given regex
+        pattern.
     '''
 
     # Initialize output array
-    output: List[Union[str, None]] = []
+    output: List[str] = []
 
     # Iterate
     for name in os.listdir():
@@ -97,9 +114,17 @@ def find_all(pattern: str) -> List[str]:
     return output
 
 
-def find_all_from_filters(filters: List[str], final_file_qualifier: str) -> List[str]:
+def find_all_from_filters(filters: List[str],
+                          final_file_qualifier: Optional[str]) -> List[str]:
     '''
-    Find all filenames which match a given set of patterns
+    Find all filenames which match a given set of patterns.
+
+    :param filters: The set of regex patterns a given file must
+        match in order to be included in the output.
+    :param final_file_qualifier: The final regex pattern which
+        all files must match. If None, does not use.
+    :returns: The set of all files in the current working
+        directory which match all the given regular expressions.
     '''
 
     name_array: List[str] = find_all(filters[0])
@@ -112,8 +137,9 @@ def find_all_from_filters(filters: List[str], final_file_qualifier: str) -> List
         if len(name_array) == 0:
             break
 
-    name_array = [name for name in name_array if re.search(
-        final_file_qualifier, name) is not None]
+    if final_file_qualifier:
+        name_array = [name for name in name_array if re.search(
+            final_file_qualifier, name) is not None]
 
     return name_array
 
@@ -125,7 +151,7 @@ def find_all_recursive(pattern: str) -> List[str]:
     '''
 
     # Initialize output array
-    output: List[Union[str, None]] = []
+    output: List[str] = []
 
     # Iterate
     for root, _, filenames in os.walk(os.getcwd()):
@@ -166,6 +192,8 @@ def main() -> int:
     output_value = fix_names(patterns)
 
     print(output_value)
+    
+    return 0
 
 
 if __name__ == '__main__':

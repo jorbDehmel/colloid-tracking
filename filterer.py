@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 '''
 This file is what you will use if you want "fancier" filtering
 and utilities, like error handling and automatic file detection
@@ -17,7 +15,7 @@ Begin with Control ("0kHz")
     Filter out any outliers that are greater than 2*STDEV
         (for the Brownian, less than 2*STDEV will often be
         negative I think)
-    Recalculate Average +STDEV from the filtered data 
+    Recalculate Average +STDEV from the filtered data
         (for reference, for top, I get average =0.014 and
         Average+2*STDEV=0.0178) For bottom, I get 0.09 and 0.14
         from the filtered data and 0.11 and 0.22 for the
@@ -52,16 +50,17 @@ col_names = ['TRACK_DISPLACEMENT',
 # Import needed packages
 import sys
 from time import time
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional, Any
 from os import chdir, getcwd, sep
 import pandas as pd
 import matplotlib.pyplot as plt
 from numpy import zeros, mean, std, percentile
 import name_fixer
 
-####################################################################################################
-# Begin settings; See docs/project_overview.pdf for a thorough explanation of each of these.
-####################################################################################################
+###############################################################################
+# Begin settings; See docs/project_overview.pdf for a thorough explanation of
+# each of these.
+###############################################################################
 
 
 # Put the folder you want to operate on into this string
@@ -130,20 +129,20 @@ do_extra_filter_scatter_plots: bool = False
 # If true, saves a histogram of filtered data points for each file
 save_filtering_data: bool = False
 
-####################################################################################################
+###############################################################################
 # End settings
-####################################################################################################
+###############################################################################
 
 # Column names which will be kept from the original .csv file
-col_names: [str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
-                    'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
-                    'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
-                    'LINEARITY_OF_FORWARD_PROGRESSION']
+col_names: List[str] = ['TRACK_DISPLACEMENT', 'TRACK_MEAN_SPEED',
+                        'TRACK_MEDIAN_SPEED', 'TRACK_MEAN_QUALITY',
+                        'TOTAL_DISTANCE_TRAVELED', 'MEAN_STRAIGHT_LINE_SPEED',
+                        'LINEARITY_OF_FORWARD_PROGRESSION']
 
 # Columns which didn't originally exist, but will exist in our output .csv
-extra_columns: [str] = ['INITIAL_TRACK_COUNT',
-                        'FILTERED_TRACK_COUNT',
-                        'STRAIGHT_LINE_SPEED_UM_PER_S']
+extra_columns: List[str] = ['INITIAL_TRACK_COUNT',
+                            'FILTERED_TRACK_COUNT',
+                            'STRAIGHT_LINE_SPEED_UM_PER_S']
 
 # These are internally used; Do not change
 brownian_speed_threshold: float = 0.0
@@ -151,44 +150,48 @@ brownian_displacement_threshold: float = 0.0
 brownian_linearity_threshold: float = 0.0
 
 # These are for internal use, do not change
-filter_scatter_plots_data: [[[]]] = []
+filter_scatter_plots_data: List[List[List[Any]]] = []
 save_num: int = 0
+quality_threshold: Optional[float] = None
 
 # These are regular expressions that power the automatic folder
 # thing. Any naming scheme which matches these regular expressions
 # is valid. If the naming scheme does not match, it is not detectable
 # by this program.
-patterns: [str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
-                   '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
-                   '(1 ?khz.*track|t1 ?khz)',
-                   '((?<![0-9])5 ?khz.*track|t5 ?khz)',
-                   '(10 ?khz.*track|t10 ?khz)',
-                   '(25 ?khz.*track|t25 ?khz)',
-                   '(50 ?khz.*track|t50 ?khz)',
-                   '(75 ?khz.*track|t75 ?khz)',
-                   '(100 ?khz.*track|t100 ?khz)',
-                   '(150 ?khz.*track|t150 ?khz)',
-                   '(200 ?khz.*track|t200 ?khz)',
-                   '(300 ?khz.*track|t300 ?khz)']
+patterns: List[str] = ['(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))',
+                       '((0.8 ?khz|800 ?hz).*track|t(0.8 ?khz|800 ?hz))',
+                       '(1 ?khz.*track|t1 ?khz)',
+                       '((?<![0-9])5 ?khz.*track|t5 ?khz)',
+                       '(10 ?khz.*track|t10 ?khz)',
+                       '(25 ?khz.*track|t25 ?khz)',
+                       '(50 ?khz.*track|t50 ?khz)',
+                       '(75 ?khz.*track|t75 ?khz)',
+                       '(100 ?khz.*track|t100 ?khz)',
+                       '(150 ?khz.*track|t150 ?khz)',
+                       '(200 ?khz.*track|t200 ?khz)',
+                       '(300 ?khz.*track|t300 ?khz)']
 
 # If the above patterns cannot be matches, it will attempt these.
-fallback_patterns: [str] = ['((?<![0-9])0 ?khz|[cC]ontrol)',
-                            '(0.8 ?khz|800 ?hz)',
-                            '1 ?khz',
-                            '(?<![0-9])5 ?khz',
-                            '10 ?khz',
-                            '25 ?khz',
-                            '50 ?khz',
-                            '75 ?khz',
-                            '100 ?khz',
-                            '150 ?khz',
-                            '200 ?khz',
-                            '300 ?khz']
+fallback_patterns: List[str] = ['((?<![0-9])0 ?khz|[cC]ontrol)',
+                                '(0.8 ?khz|800 ?hz)',
+                                '1 ?khz',
+                                '(?<![0-9])5 ?khz',
+                                '10 ?khz',
+                                '25 ?khz',
+                                '50 ?khz',
+                                '75 ?khz',
+                                '100 ?khz',
+                                '150 ?khz',
+                                '200 ?khz',
+                                '300 ?khz']
 
 
-def do_file(name: str, displacement_threshold: float = 0.0,
-            speed_threshold: float = 0.0, linearity_threshold: float = 0.0,
-            std_drop_flags: [bool] = None, iqr_drop_flags: [bool] = None,
+def do_file(name: str,
+            displacement_threshold: float = 0.0,
+            speed_threshold: float = 0.0,
+            linearity_threshold: float = 0.0,
+            std_drop_flags: List[bool] = None,
+            iqr_drop_flags: List[bool] = None,
             return_label: bool = False) -> ([float], [float]):
     '''
     Analyze a file with a given name, and return the results
@@ -212,10 +215,11 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         csv = pd.read_csv(name)
     except RuntimeError:
         print('Failed to open', name)
-        return ([None for _ in col_names] + [None, None], [None for _ in col_names])
+        return ([None for _ in col_names] + [None, None],
+                [None for _ in col_names])
 
     # Drop useless data (columns)
-    names_to_drop: [str] = []
+    names_to_drop: List[str] = []
     for column_name in csv.columns:
         if column_name not in col_names and column_name != 'TRACK_DURATION':
             names_to_drop.append(column_name)
@@ -264,9 +268,11 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             for row in csv.iterrows():
                 # Must pass duration threshold
                 if (float(row[1]['TRACK_DURATION']) < duration_threshold
-                        or float(row[1]['TRACK_DURATION']) != float(row[1]['TRACK_DURATION'])):
+                        or float(row[1]['TRACK_DURATION'])
+                        != float(row[1]['TRACK_DURATION'])):
                     dropped_row_indices.append(
-                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DURATION_THRESHOLD'])
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                         'DURATION_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -297,7 +303,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                 # Must meet mean straight line speed threshold
                 if float(row[1]['MEAN_STRAIGHT_LINE_SPEED']) < speed_threshold:
                     dropped_row_indices.append(
-                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'SPEED_THRESHOLD'])
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                         'SPEED_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -317,15 +324,18 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if do_displacement_thresh:
             for row in csv.iterrows():
                 # Must also meet displacement threshold
-                if float(row[1]['TRACK_DISPLACEMENT']) < displacement_threshold:
+                if (float(row[1]['TRACK_DISPLACEMENT'])
+                        < displacement_threshold):
                     dropped_row_indices.append(
-                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'DISPLACEMENT_THRESHOLD'])
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                         'DISPLACEMENT_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
         if csv.shape[0] == 0:
             print('In file', name)
-            print('Error! No items exceeded brownian displacement thresholding.')
+            print(
+                'Error! No items exceeded brownian displacement thresholding.')
             raise RuntimeError('Overfiltering Error')
 
     except RuntimeError as e:
@@ -339,9 +349,11 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if do_linearity_thresh:
             for row in csv.iterrows():
                 # Must pass linearity threshold
-                if float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION']) < linearity_threshold:
+                if (float(row[1]['LINEARITY_OF_FORWARD_PROGRESSION'])
+                        < linearity_threshold):
                     dropped_row_indices.append(
-                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'LINEARITY_THRESHOLD'])
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                         'LINEARITY_THRESHOLD'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -361,12 +373,15 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         if do_quality_percentile_filter:
             # Must pass quality threshold
             quality_percentile_threshold: float = percentile(
-                csv['TRACK_MEAN_QUALITY'].astype(float), q=[quality_percentile_filter])[0]
+                csv['TRACK_MEAN_QUALITY'].astype(float),
+                q=[quality_percentile_filter])[0]
 
             for row in csv.iterrows():
-                if float(row[1]['TRACK_MEAN_QUALITY']) < quality_percentile_threshold:
+                if (float(row[1]['TRACK_MEAN_QUALITY'])
+                        < quality_percentile_threshold):
                     dropped_row_indices.append(
-                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'QUALITY_PERCENTILE'])
+                        [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                         'QUALITY_PERCENTILE'])
                     csv.drop(axis=0, inplace=True, labels=[row[0]])
                     continue
 
@@ -386,38 +401,41 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         # Do STD filtering if needed
         if std_drop_flags is not None:
             # Collect STD's for the requested items
-            std_values: [float] = [
+            std_values: List[float] = [
                 std(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0
                 for i, col_name in enumerate(csv.columns)]
 
             # Collect means
-            mean_values: [float] = [
+            mean_values: List[float] = [
                 mean(csv[col_name].astype(float)) if std_drop_flags[i] else 0.0
                 for i, col_name in enumerate(csv.columns)]
 
             # Iterate over rows, dropping if needed
             for row in csv.iterrows():
-                raw_list: [float] = row[1].astype(float).to_list()
+                raw_list: List[float] = row[1].astype(float).to_list()
 
                 for i, _ in enumerate(raw_list):
                     if raw_list[i] < mean_values[i] - (2 * std_values[i]):
                         dropped_row_indices.append(
-                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                             'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
                     # Filter anything above, but ONLY if this is control
                     elif (speed_threshold == 0.0 and std_drop_flags[i]
-                            and raw_list[i] > mean_values[i] + (2 * std_values[i])):
+                            and raw_list[i] > mean_values[i]
+                            + (2 * std_values[i])):
                         dropped_row_indices.append(
-                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_STD_FILTERING'])
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                             'INTERNAL_STD_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
         if csv.shape[0] == 0:
             print('In file', name)
-            print(
-                'Error! No items survived brownian thresholding and standard deviation filtering.')
+            print('Error! No items survived brownian thresholding',
+                  'and standard deviation filtering.')
             raise RuntimeError('Overfiltering Error')
 
     except RuntimeError as e:
@@ -429,43 +447,48 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         backup = csv.copy(deep=True)
 
         # Do IQR filtering if needed
-        if iqr_drop_flags is not None and len(iqr_drop_flags) == len(csv.columns):
+        if (iqr_drop_flags is not None
+                and len(iqr_drop_flags) == len(csv.columns)):
 
             # Calculate IQR values
-            iqr_values: [float] = [0.0 for i in csv.columns]
+            iqr_values: List[float] = [0.0 for i in csv.columns]
             for i, col_name in enumerate(csv.columns):
                 if iqr_drop_flags[i]:
                     q1, q3 = percentile(csv[col_name].astype(float), [25, 75])
                     iqr_values[i] = q3 - q1
 
             # Collect means
-            mean_values: [float] = [
+            mean_values: List[float] = [
                 mean(csv[col_name].astype(float)) if iqr_drop_flags[i] else 0.0
                 for col_name in csv.columns]
 
             # Iterate over rows, dropping if needed
             for row in csv.iterrows():
-                raw_list: [float] = row[1].astype(float).to_list()
+                raw_list: List[float] = row[1].astype(float).to_list()
 
                 for i, _ in enumerate(raw_list):
                     if raw_list[i] < mean_values[i] - (1.5 * iqr_values[i]):
                         dropped_row_indices.append(
-                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                             'INTERNAL_IQR_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
                     # Filter anything above, but ONLY if this is control
                     elif (speed_threshold == 0.0 and iqr_drop_flags[i]
-                            and raw_list[i] > mean_values[i] + (1.5 * iqr_values[i])):
+                            and raw_list[i] > mean_values[i]
+                            + (1.5 * iqr_values[i])):
                         dropped_row_indices.append(
-                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'], 'INTERNAL_IQR_FILTERING'])
+                            [row[0], row[1]['MEAN_STRAIGHT_LINE_SPEED'],
+                             'INTERNAL_IQR_FILTERING'])
                         csv.drop(axis=0, inplace=True, labels=[row[0]])
                         break
 
         if csv.shape[0] == 0:
             print('In file', name)
             print(
-                'Error! No items survived brownian thresholding, STD filtering, and IQR filtering.')
+                'Error! No items survived brownian thresholding, STD',
+                'filtering, and IQR filtering.')
             raise RuntimeError('Overfiltering Error')
 
     except RuntimeError as e:
@@ -481,9 +504,9 @@ def do_file(name: str, displacement_threshold: float = 0.0,
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
 
-    output_data: [float] = [0.0 for _ in range(
+    output_data: List[float] = [0.0 for _ in range(
         len(col_names) + len(extra_columns))]
-    output_std: [float] = [0.0 for _ in range(len(col_names))]
+    output_std: List[float] = [0.0 for _ in range(len(col_names))]
 
     # Calculate means and adjusted STD's
     for i, item in enumerate(col_names):
@@ -514,7 +537,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
 
     if save_filtering_data:
         plt.hist([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
-                 for row in csv.iterrows()], bins=30, alpha=0.5, color='b', label='POST')
+                 for row in csv.iterrows()], bins=30, alpha=0.5, color='b',
+                 label='POST')
         plt.title('Pre V. Post Filter SLS w/ Means\n' + name)
 
         m = mean([float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
@@ -530,7 +554,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + '/' + name.replace('/', '_') + str(save_num) + '.png',
+            plt.savefig(secondary_save_path + '/' + name.replace('/', '_')
+                        + str(save_num) + '.png',
                         bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
@@ -549,7 +574,7 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         # scatter plot
 
         # Build into a py array
-        data: [[]] = []
+        data: List[List[Any]] = []
 
         for item in csv.iterrows():
             data.append([item[0], item[1]['MEAN_STRAIGHT_LINE_SPEED'], False])
@@ -573,7 +598,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                      [brownian_speed_threshold] +
                      [brownian_speed_threshold for _ in csv.iterrows()],
                      c='black',
-                     label='Brownian Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
+                     label='Brownian Mean + ' + str(brownian_multiplier)
+                     + ' Standard Deviations')
 
         # Brownian mean + some amount of std explicit line
         else:
@@ -582,7 +608,8 @@ def do_file(name: str, displacement_threshold: float = 0.0,
             plt.plot([3] + [int(item[0]) for item in csv.iterrows()],
                      [value] + [value for _ in csv.iterrows()],
                      c='black',
-                     label='Mean + ' + str(brownian_multiplier) + ' Standard Deviations')
+                     label='Mean + ' + str(brownian_multiplier)
+                     + ' Standard Deviations')
 
         # Kept data
         plt.scatter([int(item[0]) for item in csv.iterrows()],
@@ -598,12 +625,15 @@ def do_file(name: str, displacement_threshold: float = 0.0,
                     label='Lost')
 
         lgd = plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
-            'Kept ' + str(csv.shape[0]) + ', Lost ' + str(len(dropped_row_indices))))
+            'Kept ' + str(csv.shape[0]) + ', Lost '
+            + str(len(dropped_row_indices))))
 
         if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + '/' + name.replace('/', '_') +
+            plt.savefig(secondary_save_path + '/'
+                        + name.replace('/', '_') +
                         str(save_num) + '_track_scatter.png')
-        plt.savefig(name.replace('/', '_') + str(save_num) + '_track_scatter.png',
+        plt.savefig(name.replace('/', '_')
+                    + str(save_num) + '_track_scatter.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
@@ -636,14 +666,19 @@ def do_file(name: str, displacement_threshold: float = 0.0,
         return (output_data, output_std)
 
 
-def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_name: str,
-                           bar_column_name: str, file_name: (str | None) = None,
-                           has_control: bool = False, override_ticks: [str] = None) -> bool:
+def graph_column_with_bars(table: pd.DataFrame,
+                           bar_table: pd.DataFrame,
+                           column_name: str,
+                           bar_column_name: str,
+                           file_name: (str | None) = None,
+                           has_control: bool = False,
+                           override_ticks: List[str] = None) -> bool:
     '''
     Create a column graph with bars.
     '''
 
-    if column_name not in table.columns or bar_column_name not in bar_table.columns:
+    if (column_name not in table.columns
+            or bar_column_name not in bar_table.columns):
         return False
 
     if file_name is None:
@@ -653,15 +688,17 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
 
     plt.rc('font', size=6)
 
-    minus_bar: [float] = [table[column_name][i] - bar_table[bar_column_name][i]
-                          for i in range(len(table[column_name]))]
+    minus_bar: List[float] = [table[column_name][i]
+                              - bar_table[bar_column_name][i]
+                              for i in range(len(table[column_name]))]
 
-    plus_bar: [float] = [table[column_name][i] + bar_table[bar_column_name][i]
-                         for i in range(len(table[column_name]))]
+    plus_bar: List[float] = [table[column_name][i]
+                             + bar_table[bar_column_name][i]
+                             for i in range(len(table[column_name]))]
 
     if has_control:
-        brownian_bar: [float] = [table[column_name][0]
-                                 for _ in table[column_name]]
+        brownian_bar: List[float] = [table[column_name][0]
+                                     for _ in table[column_name]]
         plt.plot(brownian_bar)
 
     plt.plot(minus_bar)
@@ -694,7 +731,8 @@ def graph_column_with_bars(table: pd.DataFrame, bar_table: pd.DataFrame, column_
     if filter_status == '':
         filter_status = 'Unfiltered '
 
-    plt.title(name_fixer.get_cwd() + '\n' + filter_status + '\nMean ' + column_name +
+    plt.title(name_fixer.get_cwd() + '\n' + filter_status + '\nMean '
+              + column_name +
               'by Applied Frequency (Plus or Minus ' + bar_column_name + ')')
 
     plt.xlabel('Applied Frequency (Hertz)')
@@ -715,7 +753,8 @@ def main() -> int:
     Everything above here is just meta stuff.
     '''
 
-    global folder, brownian_speed_threshold, brownian_displacement_threshold, quality_threshold, brownian_linearity_threshold
+    global folder, brownian_speed_threshold, brownian_displacement_threshold
+    global quality_threshold, brownian_linearity_threshold
 
     if folder == '' or folder is None:
         if len(sys.argv) != 1:
@@ -736,7 +775,7 @@ def main() -> int:
         print('Analyzing input data at', folder)
 
     # Internal string representation of the frequencies
-    names: [str] = name_fixer.fix_names(patterns)
+    names: List[str] = name_fixer.fix_names(patterns)
     has_control: bool = names[0] is not None
 
     # Drop any files which do not exist
@@ -749,7 +788,7 @@ def main() -> int:
                 'Using fallback patterns; \
                 This could lead to picking up spots files instead of tracks.')
 
-        names: [str] = name_fixer.fix_names(fallback_patterns)
+        names: List[str] = name_fixer.fix_names(fallback_patterns)
         has_control: bool = names[0] is not None
 
         # Drop any files which do not exist
@@ -783,7 +822,8 @@ def main() -> int:
             end: float = time()
 
             # Uses updated brownian standards:
-            # In order to pass the filter, it must be more than 2 std from brownian
+            # In order to pass the filter, it must be more than 2 std from
+            # brownian
             brownian_speed_threshold = array[0][5] + \
                 brownian_multiplier * std_array[0][5]
 
@@ -823,7 +863,8 @@ def main() -> int:
 
     std_csv: pd.DataFrame = pd.DataFrame(std_array,
                                          columns=(
-                                             [name + '_STD' for name in col_names]),
+                                             [name + '_STD'
+                                              for name in col_names]),
                                          index=floated_names)
     std_csv.to_csv('track_data_summary_stds.csv')
 
@@ -849,8 +890,9 @@ def main() -> int:
     plt.close()
 
     if do_filter_scatter_plots:
-        everything_labels: [str] = [
-            'FREQUENCY', 'ORIGINAL_POSITION', 'MEAN_STRAIGHT_LINE_SPEED', 'WAS_FILTERED']
+        everything_labels: List[str] = [
+            'FREQUENCY', 'ORIGINAL_POSITION', 'MEAN_STRAIGHT_LINE_SPEED',
+            'WAS_FILTERED']
         everything = []
 
         only_kept_x = []
@@ -876,8 +918,8 @@ def main() -> int:
 
         # Save as csv
 
-        # Sort data such that its primary sort in frequency, and secondary is track number
-        # This is just aesthetic
+        # Sort data such that its primary sort in frequency, and secondary is
+        # track number. This is just aesthetic
         everything.sort(key=lambda i: float(i[0]) * 1000 + float(i[1]))
 
         csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
@@ -885,7 +927,7 @@ def main() -> int:
             csv.to_csv(secondary_save_path + '/all_tracks.csv')
         csv.to_csv('all_tracks.csv')
 
-        temp = []
+        temp: List[str] = []
         for item in floated_names:
             if item not in temp:
                 temp.append(item)
@@ -930,12 +972,14 @@ def main() -> int:
                     label='Post-Filter')
 
         plt.title(
-            'Straight Line Speed By Applied Frequency\nRed = Original, Blue = Kept')
+            'Straight Line Speed By Applied Frequency\nRed = Original,'
+            + 'Blue = Kept')
         plt.xlabel('Applied Frequency (Hz)')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
         plt.legend(bbox_to_anchor=(1.1, 1.05), title=(
-            'Kept ' + str(len(only_kept_x)) + ', Lost ' + str(len(only_lost_x))))
+            'Kept ' + str(len(only_kept_x)) + ', Lost ' + str(
+                len(only_lost_x))))
 
         if secondary_save_path is not None:
             plt.savefig(secondary_save_path + '/' +
@@ -951,11 +995,13 @@ def main() -> int:
             plt.figure(figsize=(6, 4), dpi=400)
 
             plt.scatter(only_kept_x, only_kept_y, c=[
-                        'b' for _ in only_kept_y], sizes=[5 for _ in only_kept_x])
+                        'b' for _ in only_kept_y], sizes=[
+                            5 for _ in only_kept_x])
 
             plt.title(
                 'Post-Filter Straight Line Speed By Applied Frequency\n\
-                (Only tracks which WERE included in the final dataset appear here)')
+                (Only tracks which WERE included in the final'
+                + 'dataset appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
@@ -972,11 +1018,13 @@ def main() -> int:
             plt.figure(figsize=(6, 4), dpi=400)
 
             plt.scatter(only_lost_x, only_lost_y, c=[
-                        'b' for _ in only_lost_y], sizes=[5 for _ in only_lost_x])
+                        'b' for _ in only_lost_y], sizes=[
+                            5 for _ in only_lost_x])
 
             plt.title(
                 'Filtered Out Straight Line Speed By Applied Frequency\n\
-                (Only tracks which were NOT included in the final dataset appear here)')
+                (Only tracks which were NOT included in the final dataset'
+                + 'appear here)')
             plt.xlabel('Applied Frequency (Hz)')
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 

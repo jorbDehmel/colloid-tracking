@@ -12,6 +12,7 @@ from typing import List, Dict
 from matplotlib import pyplot as plt
 import pandas as pd
 
+
 # Dict of height folders w/ labels. These go off some given root folder.
 height_folders: Dict[str, str] = {
     'bot': 'bot/',
@@ -20,6 +21,7 @@ height_folders: Dict[str, str] = {
     'bot+75': 'bot+75/',
     'bot+100': 'bot+100/'
 }
+
 
 # Dict of files to load. Each should be track file within a height folder.
 within_height_files: Dict[str, str] = {
@@ -47,15 +49,22 @@ def load_file_speed_list(path: str) -> List[float]:
     return data
 
 
-if __name__ == '__main__':
+def main(args: List[str]) -> int:
+    '''
+    The main file for when this is being run as a script.
+
+    :param args: The command-line arguments.
+    :returns: 0 on success, non-zero on failure.
+    '''
+
     fig = plt.figure()
     ax1 = fig.add_subplot(projection='3d')
 
-    if len(sys.argv) == 1:
+    if len(args) == 1:
         print('Please provide a root folder as a command-line arg.')
         sys.exit(1)
 
-    root_folder: str = sys.argv[1]
+    root_folder: str = args[1]
 
     for i, height_folder in enumerate(height_folders):
 
@@ -93,3 +102,7 @@ if __name__ == '__main__':
     plt.show()
 
     sys.exit(0)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

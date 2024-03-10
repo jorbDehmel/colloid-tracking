@@ -23,7 +23,7 @@ jedehmel@mavs.coloradomesa.edu
 import os
 import sys
 import re
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Optional
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -50,14 +50,17 @@ class File:
 # The set of all possible positions. A file should match only one.
 # Honestly, I have no idea what these mean or how to compare the
 # multiple different formats.
-z_position_filters: [str] = ['8940', '8960', '8965', '8980', '8985', '8990',
-                             '9010', '9015', '9035', '9040', '9060', '9080', '9090',
-                             '9115', '9140', '9180', '9197',
-                             '9205', '9230', '9240', '9255', '9265', '9280', '9290',
-                             '9305', '9315', '9340',
-                             'top-100', 'top-97', 'top-75', 'top-50', 'top-25', 'top(?!-)',
-                             'bot(?!\\+)', 'bot\\+25', 'bot\\+50', 'bot\\+70', 'bot\\+75',
-                             'bot\\+100', 'bot\\+190', 'bot\\+210']
+z_position_filters: List[str] = ['8940', '8960', '8965', '8980', '8985',
+                                 '8990', '9010', '9015', '9035', '9040',
+                                 '9060', '9080', '9090', '9115', '9140',
+                                 '9180', '9197', '9205', '9230', '9240',
+                                 '9255', '9265', '9280', '9290', '9305',
+                                 '9315', '9340',
+                                 'top-100', 'top-97', 'top-75', 'top-50',
+                                 'top-25', 'top(?!-)', 'bot(?!\\+)',
+                                 'bot\\+25', 'bot\\+50', 'bot\\+70',
+                                 'bot\\+75', 'bot\\+100', 'bot\\+190',
+                                 'bot\\+210']
 
 # The voltage filters to use
 voltages: Dict[str, str] = {'(?<!1)5[_ ]?[vV]': '5v',
@@ -93,7 +96,7 @@ def velocity_vs_height(
     by its height.
     '''
 
-    items: List[Tuple[List[str], List[float], List[float]]] = []
+    items: List[Tuple[str, float, float]] = []
 
     # Iterate over files
     for file in on:
@@ -106,8 +109,8 @@ def velocity_vs_height(
             if re.findall(filter_name, file.name):
 
                 name: str = filter_name
-                data: Union[None, float] = None
-                std: Union[None, float] = None
+                data: Optional[float] = None
+                std: Optional[float] = None
 
                 # Extract velocity and append
                 for row in file.data.iterrows():
@@ -123,15 +126,20 @@ def velocity_vs_height(
                 if data is None or std is None:
                     continue
 
-                items.append((name, data, std))
+                # Due to the above if statement, the "else -1.0"
+                # never occurs in either of these cases. This is
+                # only done for typing reasons.
+                items.append((
+                    name, data if data is not None else -1.0,
+                    std if std is not None else -1.0))
 
     # Sort items
     items.sort(key=lambda i: z_position_filters.index(i[0]))
 
     # Deconstruct sorted items in the correct order
-    heights: [str] = [item[0] for item in items]
-    velocities: [float] = [item[1] for item in items]
-    stds: [float] = [item[2] for item in items]
+    heights: List[str] = [item[0] for item in items]
+    velocities: List[float] = [item[1] for item in items]
+    stds: List[float] = [item[2] for item in items]
 
     return (heights, velocities, stds)
 
@@ -147,7 +155,7 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
     # Load all .csv files in the cwd
     print('Fetching files from pattern ' + pattern + "...")
     files: List[File] = []
-    found_names: [str] = name_fixer.find_all(pattern)
+    found_names: List[str] = name_fixer.find_all(pattern)
 
     found_names = [item for item in found_names if item[-4:] != '.png']
 
@@ -241,7 +249,7 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
         plt.xlabel('Height Label')
         plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
-        successes: int = 0
+        n_successes: int = 0
         for voltage, v_label in voltages.items():
             if skip_voltage:
                 v_label = '16v'
@@ -258,7 +266,7 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
             if len(heights) == 0:
                 continue
 
-            successes += 1
+            n_successes += 1
 
             # Graph data
             plt.scatter(heights, velocities, label=v_label)
@@ -267,7 +275,7 @@ def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
             if skip_voltage:
                 break
 
-        if successes == 0:
+        if n_successes == 0:
             print(f'Skipping frequency graph {f_label}')
             continue
 

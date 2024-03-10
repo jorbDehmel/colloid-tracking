@@ -35,7 +35,7 @@ and in bottom 1kHz, there were none. I think that in general
 this should be true if the tracked data is good quality.
 '''
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 import sys
 import numpy as np
 from matplotlib import pyplot as plt
@@ -47,13 +47,13 @@ import reverser
 to_capture: str = 'MEAN_STRAIGHT_LINE_SPEED'
 
 # The files to load
-filepaths: [str] = ['/home/jorb/data/Report/Top/0khztrackssexport.csv',
+filepaths: List[str] = ['/home/jorb/data/Report/Top/0khztrackssexport.csv',
                     '/home/jorb/data/Report/Top/1khztracks.csv',
                     '/home/jorb/data/Report/Bot/0khztracksexport.csv',
                     '/home/jorb/data/Report/Bot/1khztracks.csv']
 
 # Frequencies
-frequencies: [float] = [0.0, 1000.0, 0.0, 1000.0]
+frequencies: List[float] = [0.0, 1000.0, 0.0, 1000.0]
 
 
 def display_means(means: List[float], standard_deviations: List[float]) -> None:
@@ -102,12 +102,12 @@ def filter_single_file(filepath: str, is_brownian: bool,
     # Make backup for latter scatterplotting
     file_backup: pd.DataFrame = file.copy(deep=True)
 
-    speeds: [float] = file[to_capture].astype(float).to_list()
+    speeds: List[float] = file[to_capture].astype(float).to_list()
     initial_num_rows: int = len(speeds)
 
     # Calculate mean and std
-    mean: float = np.mean(speeds)
-    std: float = np.std(speeds)
+    mean: float = float(np.mean(speeds))
+    std: float = float(np.std(speeds))
 
     num_rows_dropped: int = 0
 
@@ -144,11 +144,11 @@ def filter_single_file(filepath: str, is_brownian: bool,
 
     # Recalculate mean and std
     speeds = file[to_capture].astype(float).to_list()
-    filtered_mean: float = np.mean(speeds)
-    filtered_std: float = np.std(speeds)
+    filtered_mean: float = float(np.mean(speeds))
+    filtered_std: float = float(np.std(speeds))
 
     # Create scatterplot
-    reverser.display_kept_lost_scatterplot(file_backup, file, filepath)
+    reverser.display_kept_lost_histogram(file_backup, file, filepath)
 
     # Return values as designated above
     return (file, initial_num_rows - num_rows_dropped,
@@ -161,17 +161,18 @@ def main() -> int:
     '''
 
     # Initialize lists
-    files: [pd.DataFrame] = [None for _ in range(len(filepaths))]
-    rows_kept: [int] = [None for _ in range(len(filepaths))]
-    rows_dropped: [int] = [None for _ in range(len(filepaths))]
-    means: [float] = [None for _ in range(len(filepaths))]
-    standard_deviations: [float] = [None for _ in range(len(filepaths))]
+    files: List[Optional[pd.DataFrame]] = [None for _ in range(len(filepaths))]
+
+    rows_kept: List[int] = [-1 for _ in range(len(filepaths))]
+    rows_dropped: List[int] = [-1 for _ in range(len(filepaths))]
+
+    means: List[Optional[float]] = [None for _ in range(len(filepaths))]
+    standard_deviations: List[Optional[float]] = [None for _ in range(len(filepaths))]
 
     # Iterate over list of files
     files[0], rows_kept[0], rows_dropped[0], means[0], standard_deviations[0] = filter_single_file(
         filepaths[0], True)
-    print(
-        f'Kept {rows_kept[0]} of {rows_kept[0] + rows_dropped[0]} on file {filepaths[0]}')
+    print(f'Kept {rows_kept[0]} of {rows_kept[0] + rows_dropped[0]} on file {filepaths[0]}')
 
     for i, filepath in enumerate(filepaths):
         if i == 0:
@@ -181,8 +182,7 @@ def main() -> int:
             filepath, False, means[0], standard_deviations[0])
         files[i], rows_kept[i], rows_dropped[i], means[i], standard_deviations[i] = to_unpack
 
-        print(
-            f'Kept {rows_kept[i]} of {rows_kept[i] + rows_dropped[i]} on file {filepath}')
+        print(f'Kept {rows_kept[i]} of {rows_kept[i] + rows_dropped[i]} on file {filepath}')
 
     # display_means(means, standard_deviations, frequencies)
 
@@ -193,7 +193,7 @@ def main() -> int:
     # FILEPATH,FREQUENCY,MEAN_STRAIGHT_LINE_SPEED,STRAIGHT_LINE_SPEED_STD,
     # INITIAL_TRACK_COUNT,FILTERED_TRACK_COUNT,
 
-    headers: [str] = ['FILEPATH',
+    headers: List[str] = ['FILEPATH',
                       'FREQUENCY',
                       'MEAN_STRAIGHT_LINE_SPEED',
                       'STRAIGHT_LINE_SPEED_STD',
@@ -201,10 +201,10 @@ def main() -> int:
                       'FILTERED_TRACK_COUNT']
 
     # Build raw python array
-    array: [[Union[str, float, int]]] = []
+    array: List[List[Union[str, float, int, None]]] = []
     for i, _ in enumerate(filepaths):
         # Initialize row
-        row: [Union[str, float, int]] = [0.0 for _ in headers]
+        row: List[Union[str, float, int, None]] = [0.0 for _ in headers]
 
         # Build row
         row[0] = filepaths[i]
