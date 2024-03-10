@@ -14,11 +14,11 @@ import pandas as pd
 
 # Dict of height folders w/ labels. These go off some given root folder.
 height_folders: Dict[str, str] = {
-    'bot': 'bot/analysis',
-    'bot+25': 'bot+25/analysis',
-    'bot+50': 'bot+50/analysis',
-    'bot+75': 'bot+75/analysis',
-    'bot+100': 'bot+100/analysis'
+    'bot': 'bot/',
+    'bot+25': 'bot+25/',
+    'bot+50': 'bot+50/',
+    'bot+75': 'bot+75/',
+    'bot+100': 'bot+100/'
 }
 
 # Dict of files to load. Each should be track file within a height folder.
@@ -51,7 +51,11 @@ if __name__ == '__main__':
     fig = plt.figure()
     ax1 = fig.add_subplot(projection='3d')
 
-    root_folder: str = '~/data/120um_16v_speckles_clean'
+    if len(sys.argv) == 1:
+        print('Please provide a root folder as a command-line arg.')
+        sys.exit(1)
+
+    root_folder: str = sys.argv[1]
 
     for i, height_folder in enumerate(height_folders):
 

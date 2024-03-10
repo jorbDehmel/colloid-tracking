@@ -18,13 +18,18 @@ set FOLDER bot && python speckle_to_track.py \
 '''
 
 import sys
-import speckle
+import speckle_internal
 
 
 def main() -> int:
     '''
     Main function for use when this is called as a script
     '''
+
+    if len(sys.argv) == 1:
+        print('Please provide 1 or 2 command-line arguments:',
+              'The from_filepath and optionally the to_filepath.')
+        return 1
 
     from_filepath: str = sys.argv[1]
     to_filepath: str = ''
@@ -37,11 +42,11 @@ def main() -> int:
     print(
         f'Processing speckle file {from_filepath} to tracks file {to_filepath}...')
 
-    speckle.process_file(
+    speckle_internal.process_file(
         from_filepath,
         '/tmp/junk.csv',
         to_filepath,
-        speckle.original_w / speckle.processed_w)
+        speckle_internal.original_w / speckle_internal.processed_w)
 
 
 if __name__ == '__main__':
