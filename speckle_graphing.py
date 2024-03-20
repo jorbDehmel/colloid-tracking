@@ -50,7 +50,9 @@ def main(args: List[str]) -> int:
 
     def do_root_folder(root: str) -> None:
         '''
-        Graph the given folder and save locally.
+        Graph the given folder and save locally. This folder
+        should contain files matching the `files` patterns
+        above.
 
         :param root: The folder to use
         '''
@@ -69,8 +71,9 @@ def main(args: List[str]) -> int:
         old_dir: str = os.getcwd()
         os.chdir(root)
 
-        fixed_files: List[str] = name_fixer.fix_names(files.keys())
-        labels: List[str] = [item for item in files.keys()]
+        # Look for all the frequency track files in this dir
+        labels: List[str] = list(files)
+        fixed_files: List[str] = name_fixer.fix_names(labels)
 
         zipped = [(item, files[labels[i]]) for i, item in enumerate(fixed_files) if item]
         fixed_files = [item[0] for item in zipped]
@@ -106,16 +109,13 @@ def main(args: List[str]) -> int:
         plt.title(root + ' Speckle-Tracked')
 
         # Do individual point data
-        plt.scatter([j for j in range(i)], speeds, label='Speckles', c='b')
+        plt.scatter(list(range(i)), speeds, label='Speckles', c='b')
         plt.vlines(v_lines, ymin=0, ymax=max(speeds))
 
         # Do means and STDs
         plt.scatter(v_lines[:len(means)], means, c='r')
 
         plt.errorbar(v_lines[:len(means)], means, yerr=stds)
-
-        #print(f'Mean duration: {np.mean(durations)}',
-        #      f'Duration STD: {np.std(durations)}')
 
         plt.savefig(root.replace('/', '_') + '_speckle_scatter.png')
 

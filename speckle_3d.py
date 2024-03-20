@@ -11,6 +11,8 @@ import sys
 from typing import List, Dict
 from matplotlib import pyplot as plt
 import pandas as pd
+import os
+import name_fixer
 
 
 # Dict of height folders w/ labels. These go off some given root folder.
@@ -64,9 +66,17 @@ def main(args: List[str]) -> int:
         print('Please provide a root folder as a command-line arg.')
         sys.exit(1)
 
+    original_cwd: str = os.getcwd()
     root_folder: str = args[1]
 
-    for i, height_folder in enumerate(height_folders):
+    os.chdir(root_folder)
+
+    for i, pattern in enumerate(height_folders):
+
+        results: List[str] = name_fixer.find_all_recursive(pattern)
+        assert len(results) >= 1
+
+        height_folder: str = results[0]
 
         bins: Dict[str, List[float]] = {}
 
@@ -90,6 +100,8 @@ def main(args: List[str]) -> int:
             zs += speeds
 
         ax1.scatter(xs, [i for _ in xs], zs, label=height_folder)
+
+    os.chdir(original_cwd)
 
     ax1.set_xlabel('Frequency')
     ax1.set_ylabel('Chamber Depth')

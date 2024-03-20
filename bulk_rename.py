@@ -53,13 +53,20 @@ def main(args: List[str]) -> int:
                 immediate_dir = immediate_dir[immediate_dir.index("/") + 1:]
             immediate_dir = immediate_dir.lower()
 
-            new_name: str = file[file.index(
-                immediate_dir) + len(immediate_dir) + 1:]
+            new_name: str = file
 
             new_name = new_name.replace("_avi.avi", ".avi")
+            new_name = new_name.replace(".avi.avi", ".avi")
             new_name = new_name.replace("_", "")
 
+            if immediate_dir in file:
+                new_name = file[file.index(
+                    immediate_dir) + len(immediate_dir) + 1:]
+
             new_name = directory + "/" + new_name
+
+            if new_name == path:
+                raise ValueError('No modification made')
 
             print(f"New: {new_name}")
 
