@@ -7,303 +7,203 @@ All graphs produced herein should be velocity vs. height.
 Does this process for each pattern, searching for files ONLY
 in the current working directory.
 
-Graph set A:
-- each graph is a single voltage
-- each curve is a frequency
-
-Graph set B:
-- each graph is a single frequency
-- each curve is a voltage
-
-Jordan Dehmel, 2023
-jdehmel@outlook.com
+Jordan Dehmel, 2023 - present
 jedehmel@mavs.coloradomesa.edu
+jdehmel@outlook.com
 '''
 
-import os
 import sys
 import re
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 import pandas as pd
 from matplotlib import pyplot as plt
 
-import name_fixer
-
-
-class File:
-    '''
-    A lightweight class representing a single file. Contains the
-    path used to obtain it (name), the data .csv file (data),
-    and the standard deviation .csv file (std's). Used in later
-    functions.
-    '''
-
-    def __init__(self, name: str, data: pd.DataFrame, stds: pd.DataFrame):
-        self.name = name
-        self.data = data
-        self.stds = stds
-
-    def __repr__(self) -> str:
-        return self.name
+import speckle
 
 
 # The set of all possible positions. A file should match only one.
 # Honestly, I have no idea what these mean or how to compare the
 # multiple different formats.
-z_position_filters: List[str] = ['8940', '8960', '8965', '8980', '8985',
-                                 '8990', '9010', '9015', '9035', '9040',
-                                 '9060', '9080', '9090', '9115', '9140',
-                                 '9180', '9197', '9205', '9230', '9240',
-                                 '9255', '9265', '9280', '9290', '9305',
-                                 '9315', '9340',
-                                 'top-100', 'top-97', 'top-75', 'top-50',
-                                 'top-25', 'top(?!-)', 'bot(?!\\+)',
-                                 'bot\\+25', 'bot\\+50', 'bot\\+70',
-                                 'bot\\+75', 'bot\\+100', 'bot\\+190',
-                                 'bot\\+210']
+z_position_filters: List[str] = [r'8940', r'8960', r'8965', r'8980', r'8985',
+                                 r'8990', r'9010', r'9015', r'9035', r'9040',
+                                 r'9060', r'9080', r'9090', r'9115', r'9140',
+                                 r'9180', r'9197', r'9205', r'9230', r'9240',
+                                 r'9255', r'9265', r'9280', r'9290', r'9305',
+                                 r'9315', r'9340',
+                                 r'top-100', r'top-97', r'top-75', r'top-50',
+                                 r'top-25', r'top(?!-)', r'bot(?!\+)',
+                                 r'bot\+25', r'bot\+50', r'bot\+70',
+                                 r'bot\+75', r'bot\+100', r'bot\+135',
+                                 r'bot\+165', r'bot\+190', r'bot\+195',
+                                 r'bot\+210']
 
 # The voltage filters to use
-voltages: Dict[str, str] = {'(?<!1)5[_ ]?[vV]': '5v',
-                            '8[_ ]?[vV]': '8v',
-                            '10[_ ]?[vV]': '10v',
-                            '12[_ ]?[vV]': '12v',
-                            '15[_ ]?[vV]': '15v',
-                            '16[_ ]?[vV]': '16v',
-                            '20[_ ]?[vV]': '20v'}
+voltages: Dict[str, str] = {r'(?<!1)5[_ ]?[vV]': '5v',
+                            r'8[_ ]?[vV]': '8v',
+                            r'10[_ ]?[vV]': '10v',
+                            r'12[_ ]?[vV]': '12v',
+                            r'15[_ ]?[vV]': '15v',
+                            r'16[_ ]?[vV]': '16v',
+                            r'20[_ ]?[vV]': '20v'}
 skip_voltage: bool = False
 
 # The frequency filters to use
-frequencies: Dict[str, str] = {r'^0\.': '0 Hz',
-                               r'^1000\.': '1 kHz',
-                               r'^5000\.': '5 kHz',
-                               r'^10000\.': '10 kHz',
-                               r'^25000\.': '25 kHz',
-                               r'^50000\.': '50 kHz',
-                               r'^75000\.': '75 kHz',
-                               r'^100000\.': '100 kHz'}
+frequencies: Dict[str, str] = {
+    r'control[0-9]*_tracks\.csv': '0khz',
+    r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',
+    r'0\.8khz[0-9]*_tracks\.csv': '0.8khz',
+    r'1khz[0-9]*_tracks\.csv': '1khz',
+    r'2khz[0-9]*_tracks\.csv': '2khz',
+    r'3khz[0-9]*_tracks\.csv': '3khz',
+    r'(?<![\.2])5khz[0-9]*_tracks\.csv': '5khz',
+    r'10khz[0-9]*_tracks\.csv': '10khz',
+    r'25khz[0-9]*_tracks\.csv': '25khz',
+    r'50khz[0-9]*_tracks\.csv': '50khz',
+    r'75khz[0-9]*_tracks\.csv': '75khz',
+    r'100khz[0-9]*_tracks\.csv': '100khz'}
+
+# # The frequency filters to use
+# frequencies: Dict[str, str] = {r'^0\.': '0 Hz',
+#                                r'^1000\.': '1 kHz',
+#                                r'^5000\.': '5 kHz',
+#                                r'^10000\.': '10 kHz',
+#                                r'^25000\.': '25 kHz',
+#                                r'^50000\.': '50 kHz',
+#                                r'^75000\.': '75 kHz',
+#                                r'^100000\.': '100 kHz'}
 
 
-def velocity_vs_height(
-        on: List[File],
-        frequency: str) -> Tuple[List[str], List[float], List[float]]:
+def clean_pattern(what: str, replacement: str = '_', exclude: str = '') -> str:
     '''
-    :param on:  The list of files to operate on
-    :param frequency:   The frequency pattern to use for the output
-    :return:    A 3-tuple of the heights, followed by the velocities,
-                followed by standard deviations..
+    Cleans a pattern of any gross symbols.
 
-    Gets the data required to graph a given dataset's velocity
-    by its height.
-    '''
-
-    items: List[Tuple[str, float, float]] = []
-
-    # Iterate over files
-    for file in on:
-
-        # For each file, append the first height filter that
-        # matches it to heights
-        for filter_name in z_position_filters:
-
-            # If the current filter matches, append
-            if re.findall(filter_name, file.name):
-
-                name: str = filter_name
-                data: Optional[float] = None
-                std: Optional[float] = None
-
-                # Extract velocity and append
-                for row in file.data.iterrows():
-                    if re.findall(frequency, str(row[1][0])):
-                        data = float(row[1]['MEAN_STRAIGHT_LINE_SPEED'])
-                        break
-
-                for row in file.stds.iterrows():
-                    if re.findall(frequency, str(row[1][0])):
-                        std = float(row[1]['MEAN_STRAIGHT_LINE_SPEED_STD'])
-                        break
-
-                if data is None or std is None:
-                    continue
-
-                # Due to the above if statement, the "else -1.0"
-                # never occurs in either of these cases. This is
-                # only done for typing reasons.
-                items.append((
-                    name, data if data is not None else -1.0,
-                    std if std is not None else -1.0))
-
-    # Sort items
-    items.sort(key=lambda i: z_position_filters.index(i[0]))
-
-    # Deconstruct sorted items in the correct order
-    heights: List[str] = [item[0] for item in items]
-    velocities: List[float] = [item[1] for item in items]
-    stds: List[float] = [item[2] for item in items]
-
-    return (heights, velocities, stds)
-
-
-def graph_all_matching(pattern: str = r'.*\.csv$') -> None:
-    '''
-    :param pattern: The RegEx to graph matching files of.
-    :return: Nothing
-
-    Graph all files matching a certain RegEx pattern.
+    :param what: The pattern to clean.
+    :param replacement: The thing to replace bad characters
+        with.
+    :param exclude: Any characters to allow.
+    :returns: The cleaned pattern.
     '''
 
-    # Load all .csv files in the cwd
-    print('Fetching files from pattern ' + pattern + "...")
-    files: List[File] = []
-    found_names: List[str] = name_fixer.find_all(pattern)
+    garbage: str = './\\^$*?<!'
+    for c in exclude:
+        garbage = garbage.replace(c, '')
 
-    found_names = [item for item in found_names if item[-4:] != '.png']
+    out: str = what
 
-    print('Found files:')
-    for item in found_names:
-        print('\t', item)
+    out = re.sub(r'\(.*\)', '', out)
+    out = re.sub(r'\[.*\]', '', out)
+    out = re.sub(r'\{.*\}', '', out)
 
-    clean_pattern: str = pattern.replace('.', '_')
-    clean_pattern = clean_pattern.replace('/', '_')
-    clean_pattern = clean_pattern.replace('\\', '_')
-    clean_pattern = clean_pattern.replace('^', '_')
-    clean_pattern = clean_pattern.replace('$', '_')
+    for c in garbage:
+        out = out.replace(c, replacement)
 
-    # Make local names fully qualified (needed for pd.read_csv)
-    cwd: str = os.getcwd()
-    found_names = [cwd + '/' + name for name in found_names]
+    return out
 
-    # Iterate over names, construct into files
-    for name in found_names:
 
-        # If standard deviations, pass over
-        if '_stds' in name:
+def graph_each_frequency(root: str, saveat: str = '.') -> None:
+    '''
+    Graphs by each frequency in `root`.
+
+    :param root: The folder to use as the root directory for
+        these operations.
+    '''
+
+    column_name: str = 'MEAN_STRAIGHT_LINE_SPEED'
+
+    # Iterate over frequency patterns
+    for frequency in frequencies:
+
+        print(f'Frequency {clean_pattern(frequency, "")}')
+
+        means: Dict[str, float] = {}
+        stds: Dict[str, float] = {}
+
+        def do_single_frequency_file(file: str) -> None:
+            '''
+            Loads a single frequency's tracks file and loads the
+            mean and std for straight line speed. Appends this
+            information to external variables.
+
+            :param file: The file to operate on.
+            '''
+
+            # print(f'At file {file}')
+
+            # Load tracks file
+            tracks: pd.DataFrame = pd.read_csv(file)
+            tracks.drop([0, 1, 2], inplace=True)
+
+            speeds = tracks[column_name].astype(float)
+
+            # Calculate mean MEAN_STRAIGHT_LINE_SPEED
+            mean: float = speeds.mean()
+
+            # Calculate std MEAN_STRAIGHT_LINE_SPEED
+            std: float = speeds.std()
+
+            # Extract friendlier chamber height label for the
+            # graph x-axis
+            label: str = file
+            for height_pattern in z_position_filters:
+
+                if re.findall(height_pattern, file):
+                    label = height_pattern
+                    break
+
+            # Append to `means` and `stds`
+            means[label] = mean
+            stds[label] = std
+
+        # Fetch all the data from the current frequency pattern
+        speckle.for_each_file(do_single_frequency_file, root, '.*' + frequency)
+
+        if len(means) == 0:
+            print(f'Skipping pattern {clean_pattern(frequency)}')
             continue
 
-        try:
-            temp = File(name, pd.read_csv(name), pd.read_csv(
-                name.replace('.csv', '_stds.csv')))
-            files.append(temp)
+        # Fetch the list of keys in ascending order. This will
+        # be used several times later on.
+        keys: List[str] = list(means)
+        keys.sort(key=z_position_filters.index)
 
-        except RuntimeError:
-            pass
+        cleaned_keys = [clean_pattern(key, '') for key in keys]
 
-    # Graph set A (see above)
-    print('Graphing by voltage...')
-    for voltage, v_label in voltages.items():
-        if skip_voltage:
-            v_label = '16v'
-
+        # Graph the fetched data (this is a single frequency, by
+        # chamber height)
         plt.clf()
-        plt.title('Mean Straight Line Speed at ' +
-                  v_label + ', ' + pattern + ' by Applied Frequency')
 
-        plt.xlabel('Height Label')
-        plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
+        plt.title(clean_pattern(frequency))
+        plt.xlabel('Chamber Height')
+        plt.ylabel('Mean Straight Line Speed')
 
-        # Build the set of all files matching frequency and voltage
-        if not skip_voltage:
-            cur_files = [file for file in files if re.findall(
-                voltage, file.name)]
-        else:
-            cur_files = files[:]
+        plt.plot(cleaned_keys, [means[key] for key in keys])
+        plt.errorbar(x=cleaned_keys,
+                 y=[means[key] for key in keys],
+                 yerr=[stds[key] for key in keys])
 
-        successes: int = 0
-        for frequency, f_label in frequencies.items():
-
-            # Extract data to graph
-            heights, velocities, stds = velocity_vs_height(
-                cur_files, frequency)
-
-            if len(heights) == 0:
-                continue
-            else:
-                successes += 1
-
-            # Graph data
-            plt.scatter(heights, velocities, label=frequencies[frequency])
-            plt.errorbar(heights, velocities, yerr=stds)
-
-        if successes == 0:
-            print(f'Skipping voltage graph {v_label}')
-            continue
-
-        # Save labels on graph
-        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
-
-        # Save and close graph locally
-        plt.savefig(clean_pattern + '_' + v_label + '.png',
-                    bbox_extra_artists=(lgd,), bbox_inches='tight')
+        plt.savefig(saveat + '/'
+                    + clean_pattern(frequency, '', '.')
+                    + '_chamber_height.png')
         plt.close()
 
-        if skip_voltage:
-            break
-
-    # Graph set B (see above)
-    print('Graphing by frequency...')
-    for frequency, f_label in frequencies.items():
-        plt.clf()
-        plt.title('Mean Straight Line Speed at ' +
-                  f_label + ', ' + pattern + ' by Voltage')
-
-        plt.xlabel('Height Label')
-        plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
-
-        n_successes: int = 0
-        for voltage, v_label in voltages.items():
-            if skip_voltage:
-                v_label = '16v'
-
-            # Build the set of all files matching voltage
-            if not skip_voltage:
-                cur_files = [file for file in files if re.findall(
-                    voltage, file.name)]
-
-            # Extract data to graph
-            heights, velocities, stds = velocity_vs_height(
-                cur_files, frequency)
-
-            if len(heights) == 0:
-                continue
-
-            n_successes += 1
-
-            # Graph data
-            plt.scatter(heights, velocities, label=v_label)
-            plt.errorbar(heights, velocities, yerr=stds)
-
-            if skip_voltage:
-                break
-
-        if n_successes == 0:
-            print(f'Skipping frequency graph {f_label}')
-            continue
-
-        # Save labels on graph
-        lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
-
-        # Save and close graph locally
-        plt.savefig(clean_pattern + '_' + f_label + '.png',
-                    bbox_extra_artists=(lgd,), bbox_inches='tight')
-        plt.close()
-
-    # Exit
-    print('Done.')
-    return
+        # Save as csv file
+        data: pd.DataFrame = pd.DataFrame(data={
+            'HEIGHT': cleaned_keys,
+            'MEAN_STRAIGHT_LINE_SPEED': [means[key] for key in keys],
+            'STRAIGHT_LINE_SPEED_STD': [stds[key] for key in keys],
+        })
+        data.to_csv(saveat + '/'
+                    + clean_pattern(frequency, '', '.')
+                    + '_chamber_height.csv')
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        # Put specialized stuff here
 
-        graph_all_matching('120um')
+    if len(sys.argv) != 3:
+        print('Please provide a root folder and a destination folder.',
+              '(The root folder should contain heightwise subfolders)')
+        sys.exit(1)
 
-    else:
-        print('Running from command line arguments...')
-        for arg in sys.argv:
-            if arg[-3:] == '.py':
-                continue
+    graph_each_frequency(sys.argv[1], sys.argv[2])
 
-            graph_all_matching(arg)
-
-    exit(0)
+    sys.exit(0)
