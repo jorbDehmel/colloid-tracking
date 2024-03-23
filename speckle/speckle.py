@@ -17,13 +17,11 @@ certain threshold if so desired.
 '''
 
 from re import match
-import sys
 import os
 import subprocess
-from typing import List, Union, Tuple, Callable
-from matplotlib import pyplot as plt
+from typing import List, Union, Callable, Tuple
+from numpy import hypot
 import pandas as pd
-import numpy as np
 
 
 class Track:
@@ -84,8 +82,8 @@ class Track:
         distances: List[float] = [
             (dx[i] ** 2 + dy[i] ** 2) ** 0.5 for i in range(len(dx))]
 
-        # Number of frames it existed
-        df: int = self.frames[-1] - self.frames[0] + 1
+        # Number of frames
+        df: int = self.frames[-1] - self.frames[0]
 
         return sum(distances) / df
 
@@ -135,8 +133,34 @@ class Track:
         :returns: The mean-squared displacement of the particle.
         '''
 
-        raise NotImplementedError('Fetching Means-Squared Displacement has '
-                                  + 'not been implemented yet.')
+        # Compute displacements as a list
+        displacements: List[float] = []
+
+        first_x: float = self.x_values[0]
+        first_y: float = self.y_values[0]
+
+        # Easier iteration
+        zipped: List[Tuple[float, float]] = [
+            (self.x_values[i], self.y_values[i])
+            for i, _ in enumerate(self.frames)
+        ]
+
+        for x, y in zipped[1:]:
+
+            dx: float = x - first_x
+            dy: float = y - first_y
+
+            distance: float = hypot(abs(dx), abs(dy))
+
+            displacements.append(distance)
+
+        print(displacements)
+
+        # Compute sum of squares of that list
+        sos: float = sum(d ** 2 for d in displacements)
+
+        # Return that sum divided by the number of displacements
+        return sos / len(displacements)
 
 
 # Used for pixel resizing later. Change if these are not the
@@ -153,7 +177,7 @@ encoding: str = 'mjpeg'
 # If set to 0, does no duration thresholding. Otherwise,
 # automatically drops any track w/ frame duration less than this
 # value.
-duration_threshold: int = 30
+duration_threshold: int = 0
 
 
 def for_each_file(apply: Callable[[str], None],

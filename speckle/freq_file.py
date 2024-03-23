@@ -68,7 +68,7 @@ class FilterFunction(Protocol):
 
     def __call__(self,
                  track: Union[Track, BasicTrack],
-                 **kwargs: Dict[str, Any]) -> bool:
+                 **kwargs: Any) -> bool:
         pass
 
 
@@ -109,8 +109,6 @@ class FreqFile:
         Save this object as a tracks.csv file.
 
         :param where: The filepath to save at.
-
-        ,TRACK_INDEX,TRACK_DURATION,TRACK_DISPLACEMENT,MEAN_STRAIGHT_LINE_SPEED
         '''
 
         # Construct dictionary

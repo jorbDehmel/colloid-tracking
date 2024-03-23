@@ -6,6 +6,8 @@ scatters/
 perm/
 refiltered/
 .mypy_cache/
+.hypothesis/
+.pytest_cache/
 out/
 tk
 .coverage

@@ -50,17 +50,17 @@ skip_voltage: bool = False
 control_pattern: str = r'control[0-9]*_tracks\.csv'
 frequencies: Dict[str, str] = {
     control_pattern: '0khz',
-    r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',
-    r'0\.8khz[0-9]*_tracks\.csv': '0.8khz',
-    r'1khz[0-9]*_tracks\.csv': '1khz',
-    r'2khz[0-9]*_tracks\.csv': '2khz',
-    r'3khz[0-9]*_tracks\.csv': '3khz',
-    r'(?<![\.2])5khz[0-9]*_tracks\.csv': '5khz',
-    r'10khz[0-9]*_tracks\.csv': '10khz',
-    r'25khz[0-9]*_tracks\.csv': '25khz',
-    r'50khz[0-9]*_tracks\.csv': '50khz',
-    r'75khz[0-9]*_tracks\.csv': '75khz',
-    r'100khz[0-9]*_tracks\.csv': '100khz'}
+    r'0\.5khz[0-9]*': '0.5khz',
+    r'0\.8khz[0-9]*': '0.8khz',
+    r'1khz[0-9]*': '1khz',
+    r'2khz[0-9]*': '2khz',
+    r'3khz[0-9]*': '3khz',
+    r'(?<![\.27])5khz[0-9]*': '5khz',
+    r'10khz[0-9]*': '10khz',
+    r'25khz[0-9]*': '25khz',
+    r'50khz[0-9]*': '50khz',
+    r'75khz[0-9]*': '75khz',
+    r'100khz[0-9]*': '100khz'}
 
 
 def clean_pattern(what: str, replacement: str = '_', exclude: str = '') -> str:
@@ -90,7 +90,9 @@ def clean_pattern(what: str, replacement: str = '_', exclude: str = '') -> str:
     return out
 
 
-def graph_each_frequency(root: str, saveat: str = '.') -> None:
+def graph_each_frequency(root: str,
+                         saveat: str = '.',
+                         pattern: str = '.*') -> None:
     '''
     Graphs by each frequency in `root`.
 
@@ -107,6 +109,7 @@ def graph_each_frequency(root: str, saveat: str = '.') -> None:
 
         means: Dict[str, float] = {}
         stds: Dict[str, float] = {}
+        title: str = ''
 
         def do_single_frequency_file(file: str) -> None:
             '''
@@ -117,7 +120,14 @@ def graph_each_frequency(root: str, saveat: str = '.') -> None:
             :param file: The file to operate on.
             '''
 
-            # print(f'At file {file}')
+            nonlocal means, stds, title
+
+            # Skip non-matching
+            if not re.findall(pattern, file):
+                return
+
+            print(f'Accepted file {file}')
+            title = file
 
             # Load tracks file
             tracks: pd.DataFrame = pd.read_csv(file)
@@ -148,7 +158,7 @@ def graph_each_frequency(root: str, saveat: str = '.') -> None:
         speckle.for_each_file(do_single_frequency_file, root, '.*' + frequency)
 
         if len(means) == 0:
-            print(f'Skipping pattern {clean_pattern(frequency)}')
+            print(f'Skipping pattern {frequency}')
             continue
 
         # Fetch the list of keys in ascending order. This will
@@ -162,7 +172,7 @@ def graph_each_frequency(root: str, saveat: str = '.') -> None:
         # chamber height)
         plt.clf()
 
-        plt.title(clean_pattern(frequency))
+        plt.title(clean_pattern(frequency) + f'\n{title}')
         plt.xlabel('Chamber Height')
         plt.ylabel('Mean Straight Line Speed')
 
@@ -189,11 +199,12 @@ def graph_each_frequency(root: str, saveat: str = '.') -> None:
 
 if __name__ == '__main__':
 
-    if len(sys.argv) != 3:
-        print('Please provide a root folder and a destination folder.',
+    if len(sys.argv) != 4:
+        print('Please provide a root folder, a destination folder,',
+              'and a file-matching pattern.',
               '(The root folder should contain heightwise subfolders)')
         sys.exit(1)
 
-    graph_each_frequency(sys.argv[1], sys.argv[2])
+    graph_each_frequency(sys.argv[1], sys.argv[2], sys.argv[3])
 
     sys.exit(0)

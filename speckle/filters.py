@@ -20,7 +20,7 @@ class OverFilteringError(RuntimeError):
 
 @speckle_filter
 def sls_threshold_filter(track: Union[s.Track, s.BasicTrack],
-                         **kwargs: Dict[str, Any]) -> bool:
+                         **kwargs: Any) -> bool:
     '''
     Returns true if the given track should be removed by the
     Brownian filter. Expects a definition for 'sls_threshold' in

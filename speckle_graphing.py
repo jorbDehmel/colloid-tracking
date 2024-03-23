@@ -5,7 +5,7 @@ the graphs in the CWD.
 
 Only filtered:
 python3 speckle_graphing.py ~/data/2-21-2024-data/120um/8v/ \
-    '.*' '.*\.(filtered|control)$'
+    '.*' '.*(filtered|control)'
 
 Only non-filtered:
 python3 speckle_graphing.py ~/data/2-21-2024-data/120um/8v/ \
