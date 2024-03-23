@@ -141,7 +141,7 @@ def save_multiple_relative(data: List[List[float]],
 
     extra_columns: List[str] = ['INVERSION_FREQ_HZ']
 
-    array: [List[float]] = [[] for _ in data]
+    array: List[List[float]] = [[] for _ in data]
 
     for i, dataset in enumerate(data):
         turning_point_index: int = 0

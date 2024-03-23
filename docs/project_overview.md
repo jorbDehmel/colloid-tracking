@@ -1,16 +1,27 @@
 # Project Overview
 
-This repository contains code for the filtering of data surrounding the motion of Colloids, given that the data has been extracted via ImageJ and Speckle TrackerJ. These files aim to provide accurate filtering, as well as reasonable automation.
+This repository contains code for the filtering of data
+surrounding the motion of Colloids, given that the data has been
+extracted via Speckle TrackerJ. These files aim to provide
+accurate filtering, as well as reasonable automation.
 
-This document outlines each of the included files, how to use them, and what they do. All code herein uses Python type hinting, which may be unfamiliar. If code modification is needed and this is unfamiliar, refer [here](https://docs.python.org/3/library/typing.html) (or contact me at jedehmel@mavs.coloradomesa.edu).
+This document outlines each of the included files, how to use
+them, and what they do. All code herein uses Python type
+hinting, which may be unfamiliar. If code modification is needed
+and this is unfamiliar, refer
+[here](https://docs.python.org/3/library/typing.html) (or
+contact me at jedehmel@mavs.coloradomesa.edu or
+jdehmel@outlook.com).
 
-These filters should be stable and Windows-compatible, but they have been tested on a machine running Arch Linux. If a bug is found, report it to jedehmel@mavs.coloradomesa.edu.
+These filters should be stable and Windows-compatible, but they
+have been tested on a machine running Arch Linux. If a bug is
+found, report it to jedehmel@mavs.coloradomesa.edu.
 
 Jordan Dehmel, 2023 - present,
 jdehmel@outlook.com or
 jedehmel@mavs.coloradomesa.edu
 
-## Workflow
+# Workflow
 
 1) Receive raw `*.avi` files from FIU via Globus
 2) Re-encode and downscale these using `python3 reformat_all_avis.py /where/to/save /path/to/avis`
@@ -56,9 +67,19 @@ jedehmel@mavs.coloradomesa.edu
 6) Use track file resources to extract velocities and whatnot
 7) Use local graphing resources to visualize data
 
+# Resources
+
+This section outlines some of the files included in this git
+repository. If a file is not listed here, it will probably have
+documentation in the source code.
+
 ## `simple.py`
 
-This is a simple file doing only the bare minimum. This has no error handling, so over-filtering is likely in some circumstances. Additionally, you must manually enter all filepaths by hand. If these are deal-breakers, you should instead use `filterer.py`.
+This is a simple file doing only the bare minimum. This has no
+error handling, so over-filtering is likely in some
+circumstances. Additionally, you must manually enter all
+filepaths by hand. If these are deal-breakers, you should
+instead use `filterer.py`.
 
 ### Options
 
@@ -68,19 +89,38 @@ You can change the following items in this file.
  * `filepaths` This is a list containing the filepaths which will be operated upon. For `simple.py`, you must manually enter each filepath.
  * `frequencies` This is a list of the frequencies in Hertz which were applied. The first entry should correspond to the first filepath in `filepaths`, and so on.
 
-If these variables are properly set, the protocol listed at the head of `simple.py` will be executed. However, overfiltering is likely to be an issue, and this program does not have the capability to recover from that.
+If these variables are properly set, the protocol listed at the
+head of `simple.py` will be executed. However, overfiltering is
+likely to be an issue, and this program does not have the
+capability to recover from that.
 
 ## `bulk_rename.py`
 
-This script takes one command-line argument: The folder to rename. This is to be used after the automated reorganization of output files. It strips artifacts of name disambiguation, like `.avi.avi`.
+This script takes one command-line argument: The folder to
+rename. This is to be used after the automated reorganization of
+output files. It strips artifacts of name disambiguation, like
+`.avi.avi`.
 
 ## `reformat_all_avis.py`
 
-This script takes two command-line arguments: The first is the directory inside which to save a copy of the reformatted `avi` files, and the second is the directory to recursively search for said files. It will iterate through all the subfolders of this second argument, re-encoding and re-sizing all `*.avi` files that it finds. It will also save a copy of this output file in the output directory specified in the first argument. This script will save the reformatted videos in their original location and in the output folder. **It will *not* overwrite the original files.** When saved in the output folder, the names will be disambiguated to include their fully-qualified path.
+This script takes two command-line arguments: The first is the
+directory inside which to save a copy of the reformatted `avi`
+files, and the second is the directory to recursively search for
+said files. It will iterate through all the subfolders of this
+second argument, re-encoding and re-sizing all `*.avi` files
+that it finds. It will also save a copy of this output file in
+the output directory specified in the first argument. This
+script will save the reformatted videos in their original
+location and in the output folder.
+**It will *not* overwrite the original files.** When saved in
+the output folder, the names will be disambiguated to include
+their fully-qualified path.
 
 ## `filterer.py`
 
-This is the more complicated version of `simple.py`. This program has many more options, and many more advanced features. The options of this program are listed below.
+This is the more complicated version of `simple.py`. This
+program has many more options, and many more advanced features.
+The options of this program are listed below.
 
 ### Options
 
@@ -152,23 +192,34 @@ Reconstruction:
 
 ## `name_fixer.py`
 
-This file contains only utilities for automatic name detection via Regular Expressions. This is what allows the other programs to work. You should not need to do anything with this file.
+This file contains only utilities for automatic name detection
+via Regular Expressions. This is what allows the other programs
+to work. You should not need to do anything with this file.
 
 ## `reverser.py`
 
-This file contains only utilities for plotting straight line speeds with respect to their crossover frequencies. You should not need to do anything with this file.
+This file contains only utilities for plotting straight line
+speeds with respect to their crossover frequencies. You should
+not need to do anything with this file.
 
 ## `comparisons.py`
 
-This file creates height-wise comparison graphs of all data in the current working directory, assuming that it can be broken down by height. This is true for Clark's initial glycerol data, but not KCL or the waveform experiments.
+This file creates height-wise comparison graphs of all data in
+the current working directory, assuming that it can be broken
+down by height. This is true for Clark's initial glycerol data,
+but not KCL or the waveform experiments.
 
 ## The `legacy` folder
 
-This folder contains old code which is no longer relevant. It can be ignored.
+This folder contains old code which is no longer relevant. It
+can be ignored.
 
 ## The `scripts` folder
 
-This folder contains Linux scripts for multi-folder automation. These cannot be run on Windows (except through WSL), and must be specially written for a given dataset. These can most likely be ignored.
+This folder contains Linux scripts for multi-folder automation.
+These cannot be run on Windows (except through WSL), and must be
+specially written for a given dataset. These can most likely be
+ignored.
 
 # Resources
 

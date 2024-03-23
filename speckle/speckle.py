@@ -5,9 +5,12 @@ output file.
 
 Statistic details:
 
-Mean Straight Line Speed = magnitude(vector from start to end) / number of frames
-Mean Instantaneous Velocity = sum(magnitude(velocities)) / number of velocities
-Mean Distance Traveled Speed = sum(magnitude(velocities)) / number of frames
+Mean Straight Line Speed = magnitude(vector from start to end)
+                           / number of frames
+Mean Instantaneous Velocity = sum(magnitude(velocities))
+                              / number of velocities
+Mean Distance Traveled Speed = sum(magnitude(velocities))
+                               / number of frames
 
 Capable of dropping any speckle track w/ duration under a
 certain threshold if so desired.
@@ -17,7 +20,7 @@ from re import match
 import sys
 import os
 import subprocess
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Callable
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
@@ -26,9 +29,12 @@ import numpy as np
 class Track:
     '''
     A class representing a track of a speckle-tracked particle.
+    This is the type of Track loaded from a "speckles"-formatted
+    `csv` file- That is to say, NOT a "tracks" file. There is a
+    similar class for "tracks" files in `./freq_file.py`.
     '''
 
-    def __init__(self, x: List[float], y: List[float], f: List[float]):
+    def __init__(self, x: List[float], y: List[float], f: List[int]):
         self.x_values: List[float] = x[:]
         self.y_values: List[float] = y[:]
         self.frames: List[int] = f[:]
@@ -129,6 +135,9 @@ class Track:
         :returns: The mean-squared displacement of the particle.
         '''
 
+        raise NotImplementedError('Fetching Means-Squared Displacement has '
+                                  + 'not been implemented yet.')
+
 
 # Used for pixel resizing later. Change if these are not the
 # dimensions of the data.
@@ -147,7 +156,9 @@ encoding: str = 'mjpeg'
 duration_threshold: int = 30
 
 
-def for_each_file(apply, folder: str = '.', matching: str = '.*') -> None:
+def for_each_file(apply: Callable[[str], None],
+                  folder: str = '.',
+                  matching: str = '.*') -> None:
     '''
     For each file recursively in `folder` which
     matches the given RegEx `matching`, apply the given
@@ -158,16 +169,24 @@ def for_each_file(apply, folder: str = '.', matching: str = '.*') -> None:
     :param matching: The RegEx pattern which designates a match.
     '''
 
+    visited: List[str] = []
+
     # Walk all files recursively in the current directory
     for root, _, files in os.walk(folder):
 
         # For each file (not directory) in the cwd
         for file in files:
-            if match(matching, root + '/' + file):
-                apply(root + '/' + file)
+
+            full_name: str = os.path.realpath(root + '/' + file)
+
+            if match(matching, full_name) and full_name not in visited:
+                apply(full_name)
+                visited.append(full_name)
 
 
-def for_each_dir(apply, folder: str = '.', matching: str = '.*') -> None:
+def for_each_dir(apply: Callable[[str], None],
+                 folder: str = '.',
+                 matching: str = '.*') -> None:
     '''
     For each directory recursively in `folder` which
     matches the given RegEx `matching`, apply the given
@@ -178,16 +197,23 @@ def for_each_dir(apply, folder: str = '.', matching: str = '.*') -> None:
     :param matching: The RegEx pattern which designates a match.
     '''
 
+    visited: List[str] = []
+
     # Walk all files recursively in the current directory
     for root, dirnames, _ in os.walk(folder):
 
         # For each directory in the cwd
         for dir_name in dirnames:
-            if match(matching, root + '/' + dir_name):
-                apply(root + '/' + dir_name)
+
+            full_name: str = os.path.realpath(root + '/' + dir_name)
+
+            if match(matching, full_name) and full_name not in visited:
+                apply(full_name)
+                visited.append(full_name)
 
 
-def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> None:
+def reformat_avi(to_format_filepath: str,
+                 save_filepath: str = 'out.avi') -> None:
     '''
     Uses `ffmpeg` to re-encode and downscale a given
     avi file for compatability w/ speckle tracker. This should
@@ -195,7 +221,8 @@ def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> Non
     times.
 
     :param to_format_filepath: The input avi file to process.
-    :param save_filepath: The place to save the file after processing.
+    :param save_filepath: The place to save the file after
+        processing.
     '''
 
     assert to_format_filepath[-4:] == '.avi'
@@ -209,7 +236,8 @@ def reformat_avi(to_format_filepath: str, save_filepath: str = 'out.avi') -> Non
     ], check=True)
 
     print(f'File {to_format_filepath} was re-encoded as mjpeg and',
-          f'resized to {processed_w} pixels, with the result saved at {save_filepath}')
+          f'resized to {processed_w} pixels,',
+          f'with the result saved at {save_filepath}')
 
 
 def process_file(input_filepath: str, spots_filepath: str,
@@ -278,7 +306,7 @@ def process_file(input_filepath: str, spots_filepath: str,
                              'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED']
 
         # And 3 dummy rows (see above)
-        dummy: List[str] = ['_' for _ in labels]
+        dummy: List[Union[str, float, int]] = ['_' for _ in labels]
         arr.append(dummy)
         arr.append(dummy)
         arr.append(dummy)
@@ -295,176 +323,3 @@ def process_file(input_filepath: str, spots_filepath: str,
         # Save as csv
         df: pd.DataFrame = pd.DataFrame(arr, columns=labels)
         df.to_csv(tracks_filepath)
-
-
-def main() -> int:
-    '''
-    Main function to be called if this is being used as a script
-    '''
-
-    # Uncomment to demonstrate translation script for speckle data to tracks data
-    # process_file('/home/jorb/data/120um_16v_speckles_clean/bot/analysis/1khz_speckles.csv',
-    #              'junk.csv', 'junk_tracks.csv', original_w / processed_w)
-
-    filepath: str = 'junk.csv'
-
-    dataframe: pd.DataFrame = pd.read_csv(filepath)
-
-    tracks: List[Track] = []
-    cur_track: Track = Track([], [], [])
-    i: int = 0
-
-    for row in dataframe.iterrows():
-        if i == 0:
-            i += 1
-            continue
-
-        if 'stop speckle' in row[0][0]:
-            tracks.append(cur_track)
-        elif 'start speckle' in row[0][0]:
-            cur_track = Track([], [], [])
-        else:
-            cur_track.append(
-                float(row[0][0]), processed_w - float(row[0][1]), int(row[0][2]))
-
-        i += 1
-
-    # Load old stuff from trackmate
-    old_x: List[float] = []
-    old_y: List[float] = []
-    old_sls: List[float] = []
-    trackmate_filepath: str = 'filtered track data.csv'
-
-    old: pd.DataFrame = pd.read_csv(trackmate_filepath)
-    for i, row in enumerate(old.iterrows()):
-        if i < 3:
-            continue
-
-        old_x.append(float(row[1]['TRACK_X_LOCATION']))
-        old_y.append(float(row[1]['TRACK_Y_LOCATION']))
-        old_sls.append(float(row[1]['MEAN_STRAIGHT_LINE_SPEED']))
-
-    # Adjust scale
-    old_x = [i / (original_w / processed_w) for i in old_x]
-    old_y = [i / (original_w / processed_w) for i in old_y]
-    old_sls = [i / (original_w / processed_w) for i in old_sls]
-
-    # Adjust position (y is flipped)
-    old_y = [processed_w - i for i in old_y]
-
-    all_colors: List[str] = ['b', 'g', 'r', 'y']
-
-    x_values: List[float] = []
-    y_values: List[float] = []
-    colors: List[str] = []
-
-    for j, track in enumerate(tracks):
-        for i, _ in enumerate(track.x_values):
-            x_values.append(track.x_values[i])
-            y_values.append(track.y_values[i])
-
-            colors.append(all_colors[j % len(all_colors)])
-
-    print(
-        f'Processed {len(tracks)} tracks with',
-        f'{sum(len(track.x_values) for track in tracks)} data points'
-    )
-
-    plt.xlim((0, processed_w))
-    plt.ylim((0, processed_w))
-
-    plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
-
-    plt.scatter(old_x, old_y, s=25.0, label='TrackMate Starting Positions')
-    plt.scatter(x_values, y_values, c=colors, s=3.0)
-
-    lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
-
-    plt.title('Tracked Speckles (Scaled Down)')
-    plt.xlabel('X Pixels')
-    plt.ylabel('Y Pixels')
-    plt.savefig('tracked_speckles.png',
-                bbox_extra_artists=(lgd,), bbox_inches='tight')
-
-    plt.clf()
-
-    old_arrows: List[Tuple[float, float, float]] = []
-    new_arrows: List[Tuple[float, float, float]] = []
-
-    for track in tracks:
-        new_arrows.append((track.x_values[0], track.y_values[0], track.sls()))
-
-    for i, _ in enumerate(old_sls):
-        old_arrows.append((old_x[i], old_y[i], old_sls[i]))
-
-    for arrow in old_arrows:
-        plt.arrow(arrow[0], arrow[1], 100 * arrow[2], 0)
-
-    for arrow in new_arrows:
-        plt.arrow(arrow[0], arrow[1], 100 * arrow[2], 0)
-
-    plt.scatter(x_values, y_values, c=colors, s=3.0, alpha=0.1)
-
-    plt.scatter(old_x, old_y, s=25.0, label='TrackMate')
-    plt.scatter([track.x_values[0] for track in tracks], [track.y_values[0]
-                for track in tracks], s=25.0, label='Speckles')
-
-    plt.legend()
-    plt.savefig('vectors.png')
-
-    plt.clf()
-
-    # Sort things
-    old_sls.sort(reverse=True)
-    tracks.sort(reverse=True, key=lambda x: x.sls())
-
-    plt.scatter([i for i in range(len(tracks))],
-                [track.sls() for track in tracks],
-                c='r', label='Mean Straight Line Speed (Speckles)')
-
-    plt.scatter([i for i in range(len(old_sls))],
-                [sls for sls in old_sls],
-                c='b', label='Mean Straight Line Speed (Manual)')
-
-    error_squared: List[float] = [
-        abs(tracks[i].sls() - old_sls[i]) for i in range(min(len(tracks), len(old_sls)))]
-    plt.scatter([i for i in range(len(error_squared))],
-                [err for err in error_squared],
-                c='y', label='Absolute Value of Error')
-
-    # plt.scatter([i for i in range(len(tracks))],
-    #             [track.mdts() for track in tracks],
-    #             c='b', label='Mean Distance Traveled Speed')
-    # plt.scatter([i for i in range(len(tracks))],
-    #             [track.mv() for track in tracks],
-    #             c='g', label='Mean Instantaneous Velocity')
-
-    sls_values: List[float] = [track.sls() for track in tracks]
-    sls_mean: float = sum(sls_values) / len(sls_values)
-    sls_std: float = np.std(sls_values)
-
-    plt.hlines(y=[sls_mean - sls_std, sls_mean, sls_mean + sls_std],
-               xmin=0, xmax=len(tracks), colors=['k'], label='Mean SLS +- 1 STD')
-
-    manual_mean: float = sum(old_sls) / len(old_sls)
-    manual_std: float = np.std(old_sls)
-
-    plt.hlines(y=[manual_mean - manual_std, manual_mean, manual_mean + manual_std],
-               xmin=0, xmax=len(tracks), colors=['r'], label='Manual Mean SLS +- 1 STD')
-
-    plt.legend()
-    plt.title('Speckle Velocities')
-    plt.savefig('speckle_velocities.png')
-
-    print(
-        f'Mean SLS: {sls_mean} processed pixels/frame, SLS STD: {sls_std} processed pixels/frame')
-
-    if original_w is not None:
-        print(
-            f'Mean SLS: {(original_w / processed_w) * sls_mean}',
-            f'pixels/frame, SLS STD: {(original_w / processed_w) * sls_std} pixels/frame'
-        )
-
-
-if __name__ == '__main__':
-    sys.exit(main())

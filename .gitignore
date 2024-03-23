@@ -6,7 +6,9 @@ scatters/
 perm/
 refiltered/
 .mypy_cache/
+out/
 tk
+.coverage
 *.png
 *.csv
 *.pickle

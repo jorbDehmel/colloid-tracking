@@ -21,9 +21,8 @@ from matplotlib import pyplot as plt
 import speckle
 
 
-# The set of all possible positions. A file should match only one.
-# Honestly, I have no idea what these mean or how to compare the
-# multiple different formats.
+# The set of all possible chamber heights. A set of files should
+# match only one.
 z_position_filters: List[str] = [r'8940', r'8960', r'8965', r'8980', r'8985',
                                  r'8990', r'9010', r'9015', r'9035', r'9040',
                                  r'9060', r'9080', r'9090', r'9115', r'9140',
@@ -48,8 +47,9 @@ voltages: Dict[str, str] = {r'(?<!1)5[_ ]?[vV]': '5v',
 skip_voltage: bool = False
 
 # The frequency filters to use
+control_pattern: str = r'control[0-9]*_tracks\.csv'
 frequencies: Dict[str, str] = {
-    r'control[0-9]*_tracks\.csv': '0khz',
+    control_pattern: '0khz',
     r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',
     r'0\.8khz[0-9]*_tracks\.csv': '0.8khz',
     r'1khz[0-9]*_tracks\.csv': '1khz',
@@ -61,16 +61,6 @@ frequencies: Dict[str, str] = {
     r'50khz[0-9]*_tracks\.csv': '50khz',
     r'75khz[0-9]*_tracks\.csv': '75khz',
     r'100khz[0-9]*_tracks\.csv': '100khz'}
-
-# # The frequency filters to use
-# frequencies: Dict[str, str] = {r'^0\.': '0 Hz',
-#                                r'^1000\.': '1 kHz',
-#                                r'^5000\.': '5 kHz',
-#                                r'^10000\.': '10 kHz',
-#                                r'^25000\.': '25 kHz',
-#                                r'^50000\.': '50 kHz',
-#                                r'^75000\.': '75 kHz',
-#                                r'^100000\.': '100 kHz'}
 
 
 def clean_pattern(what: str, replacement: str = '_', exclude: str = '') -> str:
