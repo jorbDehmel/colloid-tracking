@@ -2,6 +2,7 @@
 A simple bulk rename tool.
 """
 
+import os
 import sys
 from typing import List
 import shutil
@@ -11,7 +12,7 @@ from speckle import speckle
 def main(args: List[str]) -> int:
     """
     The main function. Takes in command-line arguments
-    are returns an exit code.
+    and returns an exit code.
 
     :param args: The command line args
     :returns: 0 on success, other on failure
@@ -37,6 +38,8 @@ def main(args: List[str]) -> int:
         Attempts to erase evidence of name mangling from
         previous scripts.
         """
+
+        path = os.path.realpath(path)
 
         try:
 
@@ -68,7 +71,7 @@ def main(args: List[str]) -> int:
             if new_name == path:
                 raise ValueError('No modification made')
 
-            print(f"New: {new_name}")
+            # print(f"Old: {path}\nNew: {new_name}")
 
             shutil.move(path, new_name)
 

@@ -41,7 +41,8 @@ class TestFilters(unittest.TestCase):
             self.normal.tracks.append(t)
             self.basic.tracks.append(BasicTrack(t.duration(),
                                                 t.displacement(),
-                                                t.sls()))
+                                                t.sls(),
+                                                t.msd()))
 
     def tearDown(self) -> None:
         '''
@@ -59,6 +60,8 @@ class TestFilters(unittest.TestCase):
 
         self.assertEqual(self.basic.sls_mean(), self.normal.sls_mean())
         self.assertEqual(self.basic.sls_std(), self.normal.sls_std())
+        self.assertEqual(self.basic.msd_mean(), self.normal.msd_mean())
+        self.assertEqual(self.basic.msd_std(), self.normal.msd_std())
 
         self.basic.filter(f.sls_threshold_filter, sls_threshold=10.0)
         self.normal.filter(f.sls_threshold_filter, sls_threshold=10.0)

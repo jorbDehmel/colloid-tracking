@@ -14,7 +14,7 @@ jdehmel@outlook.com
 
 import sys
 import re
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -101,6 +101,11 @@ def graph_each_frequency(root: str,
     '''
 
     column_name: str = 'MEAN_STRAIGHT_LINE_SPEED'
+    all_data: Dict[str, Tuple[List[str], List[float], List[float]]] = {}
+
+    # Used for comparing SLS and MSD
+    all_sls: List[float] = []
+    all_msd: List[float] = []
 
     # Iterate over frequency patterns
     for frequency in frequencies:
@@ -134,6 +139,12 @@ def graph_each_frequency(root: str,
             tracks.drop([0, 1, 2], inplace=True)
 
             speeds = tracks[column_name].astype(float)
+
+            if 'MEAN_SQUARED_DISPLACEMENT' in tracks:
+                all_sls += speeds
+                all_msd += tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float)
+            else:
+                print('Failed to find MSD entries.')
 
             # Calculate mean MEAN_STRAIGHT_LINE_SPEED
             mean: float = speeds.mean()
@@ -176,25 +187,54 @@ def graph_each_frequency(root: str,
         plt.xlabel('Chamber Height')
         plt.ylabel('Mean Straight Line Speed')
 
-        plt.plot(cleaned_keys, [means[key] for key in keys])
+        plt.plot(cleaned_keys, [means[key] for key in keys], label=clean_pattern(frequency))
         plt.errorbar(x=cleaned_keys,
                  y=[means[key] for key in keys],
                  yerr=[stds[key] for key in keys])
 
+        plt.legend()
         plt.savefig(saveat + '/'
                     + clean_pattern(frequency, '', '.')
                     + '_chamber_height.png')
+
         plt.close()
 
+        all_data[frequency] = (cleaned_keys,
+                               [means[key] for key in keys],
+                               [stds[key] for key in keys])
+
         # Save as csv file
-        data: pd.DataFrame = pd.DataFrame(data={
+        pd.DataFrame(data={
             'HEIGHT': cleaned_keys,
             'MEAN_STRAIGHT_LINE_SPEED': [means[key] for key in keys],
             'STRAIGHT_LINE_SPEED_STD': [stds[key] for key in keys],
-        })
-        data.to_csv(saveat + '/'
-                    + clean_pattern(frequency, '', '.')
-                    + '_chamber_height.csv')
+        }).to_csv(saveat + '/'
+            + clean_pattern(frequency, '', '.')
+            + '_chamber_height.csv')
+
+    plt.clf()
+
+    plt.title(title)
+    plt.xlabel('Chamber Height')
+    plt.ylabel('Mean Straight Line Speed')
+
+    for frequency, (cleaned_keys, means, stds) in all_data.items():
+        plt.errorbar(x=cleaned_keys,
+                     y=means,
+                     yerr=stds,
+                     label=clean_pattern(frequency))
+
+    plt.legend(bbox_to_anchor=(1,1), loc="upper left")
+    plt.savefig(saveat + '/chamber_height.png', bbox_inches='tight')
+
+    plt.close()
+
+    plt.clf()
+    plt.title('SLS vs. MSD')
+    plt.scatter(all_sls, all_msd)
+    plt.xlabel('SLS')
+    plt.ylabel('MSD')
+    plt.savefig(saveat + '/sls_vs_msd.png')
 
 
 if __name__ == '__main__':

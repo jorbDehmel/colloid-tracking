@@ -27,10 +27,10 @@ class TestFreqFile(unittest.TestCase):
 
         self.f = s.FreqFile()
 
-        self.f.tracks.append(s.BasicTrack(5, 10.0, 4.0))
-        self.f.tracks.append(s.BasicTrack(2, 100.0, 3.0))
-        self.f.tracks.append(s.BasicTrack(10, 5.0, 2.0))
-        self.f.tracks.append(s.BasicTrack(8, 2.0, 1.0))
+        self.f.tracks.append(s.BasicTrack(5, 10.0, 4.0, 3.5))
+        self.f.tracks.append(s.BasicTrack(2, 100.0, 3.0, 3.6))
+        self.f.tracks.append(s.BasicTrack(10, 5.0, 2.0, 2.5))
+        self.f.tracks.append(s.BasicTrack(8, 2.0, 1.0, 10.0))
 
     def test_save_tracks(self) -> None:
         '''
@@ -96,7 +96,19 @@ class TestBasicTrack(unittest.TestCase):
 
         @given(some.floats(allow_nan=False))
         def test_on_value(value: float) -> None:
-            self.assertEqual(s.BasicTrack(-1, -1, value).sls(), value)
+            self.assertEqual(s.BasicTrack(-1, -1, value, -1.0).sls(), value)
+
+        test_on_value()
+
+    def test_msd(self) -> None:
+        '''
+        Tests MSD (mean squared displacement) for the BasicTrack
+        class. This is just a getter by definition.
+        '''
+
+        @given(some.floats(allow_nan=False))
+        def test_on_value(value: float) -> None:
+            self.assertEqual(s.BasicTrack(-1, -1, -1.0, value).msd(), value)
 
         test_on_value()
 
@@ -107,7 +119,10 @@ class TestBasicTrack(unittest.TestCase):
 
         @given(some.floats(allow_nan=False))
         def test_on_value(value: float) -> None:
-            self.assertEqual(s.BasicTrack(-1, value, -1.0).displacement(),
+            self.assertEqual(s.BasicTrack(-1,
+                                          value,
+                                          -1.0,
+                                          -1.0).displacement(),
                              value)
 
         test_on_value()
@@ -119,7 +134,7 @@ class TestBasicTrack(unittest.TestCase):
 
         @given(some.integers())
         def test_on_value(value: int) -> None:
-            self.assertEqual(s.BasicTrack(value, -1.0, -1.0).duration(),
+            self.assertEqual(s.BasicTrack(value, -1.0, -1.0, -1.0).duration(),
                              value)
 
         test_on_value()

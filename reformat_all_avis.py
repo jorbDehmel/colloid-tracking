@@ -4,6 +4,7 @@ Unless you know what you're doing, you do not want to modify
 anything outside of the `settings` section.
 '''
 
+import os
 import sys
 import shutil
 from typing import List
@@ -52,15 +53,22 @@ def main(args: List[str]) -> int:
         if '_rf.avi' in what:
             return
 
-        # Downsize and re-encode the given file. Saves w/ a `_rf.avi` suffix
-        # for `reformatted`.
+        # Recurse if directory
+        if os.path.isdir(what):
+            speckle.for_each_file(reformat_avi_file, what, r'.*\.avi')
+            return
+
+        print(f'Operating on file {what}')
+
+        # Downsize and re-encode the given file. Saves w/ a
+        # `_rf.avi` suffix for `reformatted`.
         speckle.reformat_avi(what, what + '_rf.avi')
 
         # This includes the fully-qualified system path of a file
         # in its copied name, allowing disambiguation later on.
         # This is called both "mangling" and "name disambiguation".
         mangled_name: str = what.replace(
-            ' ', '_').replace('/', '_').replace('\\', '_').lower() + '.avi'
+            ' ', '_').replace('/', '_').replace('\\', '_').lower()
 
         # Copy the mangled name to the backup folder.
         shutil.copy(what + '_rf.avi', backup_avi_folder +

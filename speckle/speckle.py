@@ -133,6 +133,9 @@ class Track:
         :returns: The mean-squared displacement of the particle.
         '''
 
+        if len(self.x_values) < 2:
+            return 0.0
+
         # Compute displacements as a list
         displacements: List[float] = []
 
@@ -153,8 +156,6 @@ class Track:
             distance: float = hypot(abs(dx), abs(dy))
 
             displacements.append(distance)
-
-        print(displacements)
 
         # Compute sum of squares of that list
         sos: float = sum(d ** 2 for d in displacements)
@@ -327,7 +328,8 @@ def process_file(input_filepath: str, spots_filepath: str,
         cur: List[Union[str, float, int]] = []
 
         labels: List[str] = ['TRACK_INDEX', 'TRACK_DURATION',
-                             'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED']
+                             'TRACK_DISPLACEMENT', 'MEAN_STRAIGHT_LINE_SPEED',
+                             'MEAN_SQUARED_DISPLACEMENT']
 
         # And 3 dummy rows (see above)
         dummy: List[Union[str, float, int]] = ['_' for _ in labels]
@@ -340,7 +342,8 @@ def process_file(input_filepath: str, spots_filepath: str,
             cur = [k,
                    cur_track.duration(),
                    cur_track.displacement() * adjustment_coefficient,
-                   cur_track.sls() * adjustment_coefficient]
+                   cur_track.sls() * adjustment_coefficient,
+                   cur_track.msd() * (adjustment_coefficient ** 2)]
 
             arr.append(cur)
 

@@ -113,6 +113,8 @@ class TestTrack(unittest.TestCase):
 
         self.assertAlmostEqual(t.msd(), 25.0, 5)
 
+        self.assertEqual(s.Track([0.0], [0.0], [0]).msd(), 0.0)
+
 
 class TestMiscSpeckleFunctions(unittest.TestCase):
     '''
@@ -125,8 +127,6 @@ class TestMiscSpeckleFunctions(unittest.TestCase):
         Set up the file structure needed in order to properly
         test the file operations.
         '''
-
-        print(f'CWD: {os.getcwd()}')
 
         # Basic variable setup
         self.avi_path: str = 'test.avi.testcase'

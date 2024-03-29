@@ -29,7 +29,8 @@ class BasicTrack:
     def __init__(self,
                  duration: int,
                  displacement: float,
-                 sls: float) -> None:
+                 sls: float,
+                 msd: float) -> None:
         '''
         Setup a BasicTrack object with the given parameters.
         '''
@@ -37,6 +38,7 @@ class BasicTrack:
         self.__duration = duration
         self.__displacement = displacement
         self.__sls = sls
+        self.__msd = msd
 
     def sls(self) -> float:
         '''
@@ -44,6 +46,13 @@ class BasicTrack:
         '''
 
         return self.__sls
+
+    def msd(self) -> float:
+        '''
+        :returns: The mean-squared displacement for this track.
+        '''
+
+        return self.__msd
 
     def displacement(self) -> float:
         '''
@@ -195,6 +204,24 @@ class FreqFile:
 
         return (erased, len(self.tracks))
 
+    def msd_mean(self) -> float:
+        '''
+        :returns: The mean of the MSD values of the tracks
+            within.
+        '''
+
+        msd_values: List[float] = [track.msd() for track in self.tracks]
+        return float(np.mean(msd_values))
+
+    def msd_std(self) -> float:
+        '''
+        :returns: The std of the MSD values of the tracks
+            within.
+        '''
+
+        msd_values: List[float] = [track.msd() for track in self.tracks]
+        return float(np.std(msd_values))
+
     def sls_mean(self) -> float:
         '''
         Returns the mean SLS of the tracks.
@@ -251,6 +278,7 @@ def load_frequency_file(path: str,
             duration: int = -1
             displacement: float = -1.0
             sls: float = -1.0
+            msd: float = -1.0
 
             # Check for each key's presence in the row, and if
             # it is there, use that value.
@@ -263,10 +291,14 @@ def load_frequency_file(path: str,
             if 'MEAN_STRAIGHT_LINE_SPEED' in row:
                 sls = float(row['MEAN_STRAIGHT_LINE_SPEED'])
 
+            if 'MEAN_SQUARED_DISPLACEMENT' in row:
+                msd = float(row['MEAN_SQUARED_DISPLACEMENT'])
+
             # Construct BasicTrack with read params
             to_append: BasicTrack = BasicTrack(duration,
                                                displacement,
-                                               sls)
+                                               sls,
+                                               msd)
 
             # Append this data
             out.tracks.append(to_append)
