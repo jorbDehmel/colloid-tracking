@@ -11,6 +11,11 @@ import sys
 import speckle
 
 
+# Note: This is a very important filter! It's not a good idea to
+# turn it off.
+speckle.duration_threshold = 30
+
+
 def main() -> int:
     '''
     Main function for use when this is called as a script

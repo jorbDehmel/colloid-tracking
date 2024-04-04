@@ -18,6 +18,8 @@ speckle.original_w = 1024   # The original width of the video
 speckle.processed_w = 512   # The target width of the video
 speckle.encoding = 'mjpeg'  # The (ImageJ compatible) encoding
 
+# Note: The output will also be converted to black and white.
+
 ################################################################
 # End Settings
 ################################################################
@@ -60,8 +62,8 @@ def main(args: List[str]) -> int:
 
         print(f'Operating on file {what}')
 
-        # Downsize and re-encode the given file. Saves w/ a
-        # `_rf.avi` suffix for `reformatted`.
+        # Downsize, grayscale, and re-encode the given file.
+        # Saves w/ a `_rf.avi` suffix for `reformatted`.
         speckle.reformat_avi(what, what + '_rf.avi')
 
         # This includes the fully-qualified system path of a file

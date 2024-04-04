@@ -178,7 +178,7 @@ encoding: str = 'mjpeg'
 # If set to 0, does no duration thresholding. Otherwise,
 # automatically drops any track w/ frame duration less than this
 # value.
-duration_threshold: int = 0
+duration_threshold: int = 30
 
 
 def for_each_file(apply: Callable[[str], None],
@@ -240,7 +240,7 @@ def for_each_dir(apply: Callable[[str], None],
 def reformat_avi(to_format_filepath: str,
                  save_filepath: str = 'out.avi') -> None:
     '''
-    Uses `ffmpeg` to re-encode and downscale a given
+    Uses `ffmpeg` to re-encode, grayscale and downscale a given
     avi file for compatability w/ speckle tracker. This should
     be used on all avi files before analysis to avoid long wait
     times.
@@ -256,12 +256,16 @@ def reformat_avi(to_format_filepath: str,
     # Run command to encode and downscale the given file,
     # with the output being saved at the desired location.
     subprocess.run([
-        'ffmpeg', '-y', '-i', to_format_filepath, '-c:v', encoding,
-        '-vf', 'scale=-2:' + str(processed_w), save_filepath
+        'ffmpeg',
+        '-y',
+        '-i', to_format_filepath,
+        '-c:v', encoding,
+        '-vf', f'scale=-2:{str(processed_w)}, hue=s=0',
+        save_filepath
     ], check=True)
 
-    print(f'File {to_format_filepath} was re-encoded as mjpeg and',
-          f'resized to {processed_w} pixels,',
+    print(f'File {to_format_filepath} was re-encoded as mjpeg,',
+          f'turned grayscale and resized to {processed_w} pixels,',
           f'with the result saved at {save_filepath}')
 
 

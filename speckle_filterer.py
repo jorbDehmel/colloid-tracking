@@ -16,7 +16,7 @@ from speckle import filters as f
 
 
 # The RegEx pattern used to detect control files
-control_pattern: str = r'(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control))'
+control_pattern: str = r'(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control)).*\.csv'
 
 # The Brownian threshold filter removes any track whose SLS is
 # < BROWNIAN_MEAN_SLS + k * BROWNIAN_STD_SLS
@@ -96,6 +96,8 @@ def main(args: List[str]) -> int:
             nonlocal total_dropped, total_remaining, files_skipped
 
             file_path = os.path.realpath(file_path)
+
+            print(f'Operating on file "{file_path}"')
 
             # Do not operate on control files
             if os.path.samefile(file_path, fq_control_path):

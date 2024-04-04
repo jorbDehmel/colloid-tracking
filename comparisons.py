@@ -125,10 +125,11 @@ def graph_each_frequency(root: str,
             :param file: The file to operate on.
             '''
 
-            nonlocal means, stds, title
+            nonlocal means, stds, title, all_sls, all_msd
 
             # Skip non-matching
-            if not re.findall(pattern, file):
+            if not re.findall(pattern, file) or 'ANOMALY' in file:
+                print(f'Rejected file {file}')
                 return
 
             print(f'Accepted file {file}')
@@ -141,8 +142,8 @@ def graph_each_frequency(root: str,
             speeds = tracks[column_name].astype(float)
 
             if 'MEAN_SQUARED_DISPLACEMENT' in tracks:
-                all_sls += speeds
-                all_msd += tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float)
+                all_sls += list(speeds)
+                all_msd += list(tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float))
             else:
                 print('Failed to find MSD entries.')
 
@@ -160,6 +161,10 @@ def graph_each_frequency(root: str,
                 if re.findall(height_pattern, file):
                     label = height_pattern
                     break
+
+            if label in means or label in stds:
+                print(f'Abandoning {file}')
+                return
 
             # Append to `means` and `stds`
             means[label] = mean
@@ -230,11 +235,15 @@ def graph_each_frequency(root: str,
     plt.close()
 
     plt.clf()
-    plt.title('SLS vs. MSD')
-    plt.scatter(all_sls, all_msd)
+    plt.title(f'SLS vs. MSD (N = {len(all_sls)})')
+    plt.scatter(all_sls, all_msd, s=1.0)
     plt.xlabel('SLS')
     plt.ylabel('MSD')
     plt.savefig(saveat + '/sls_vs_msd.png')
+
+    plt.close()
+
+    pd.DataFrame(data={'sls': all_sls, 'msd': all_msd}).to_csv('sls_vs_msd.csv')
 
 
 if __name__ == '__main__':

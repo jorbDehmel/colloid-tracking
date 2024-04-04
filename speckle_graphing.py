@@ -29,7 +29,7 @@ files: Dict[str, str] = {
     r'1khz[0-9]*_tracks\.csv': '1khz',
     r'2khz[0-9]*_tracks\.csv': '2khz',
     r'3khz[0-9]*_tracks\.csv': '3khz',
-    r'(?<![\.2])5khz[0-9]*_tracks\.csv': '5khz',
+    r'(?<![\.0-9])5khz[0-9]*_tracks\.csv': '5khz',
     r'10khz[0-9]*_tracks\.csv': '10khz',
     r'25khz[0-9]*_tracks\.csv': '25khz',
     r'50khz[0-9]*_tracks\.csv': '50khz',
