@@ -1,0 +1,20 @@
+@startuml
+
+folder FIU {
+    node "Physical Experiments" as A
+    node "Videos" as B
+}
+
+folder CMU {
+    node "Speckle Files" as C
+    node "Track Files" as D
+}
+
+node "Usable Data" as E
+
+A -d- B :>
+B -d- C : SpeckleTrackerJ >
+C -d- D : Python scripts >
+D -d- E : Python scripts & filters >
+
+@enduml
