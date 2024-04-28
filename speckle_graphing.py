@@ -156,7 +156,7 @@ def main(args: List[str]) -> int:
         # Simple plot CSV version
         d: Dict[str, List[Any]] = {}
 
-        d['CHAMBER_HEIGHT'] = labels
+        d['FREQUENCY'] = labels
         d['SLS_MEAN'] = means
         d['SLS_STD'] = stds
 
