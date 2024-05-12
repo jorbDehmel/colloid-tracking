@@ -25,7 +25,34 @@ Jordan Dehmel, 2023 - present,
 jdehmel@outlook.com or
 jedehmel@mavs.coloradomesa.edu
 
+# Prerequisites - Installing `fiji`, `Speckle TrackerJ`, and relevant python scripts
+
+`fiji` is the image analysis framework we will be using. `Speckle TrackerJ` is and extension of `fiji` which allows us to track movement over time in videos.
+
+## `fiji` and `Speckle TrackerJ`
+
+1) Download `fiji` via https://imagej.net/software/fiji/downloads
+2) Unzip the `fiji` package to somewhere safe. **Remember where this is, you will need it.** `fiji` can be run directly from this location.
+3) Download `SpeckleLib.jar` and `Speckle_TrackerJ.java` via https://www.lehigh.edu/~div206/speckletrackerj/download.html
+4) Install the Java Development Kit. Follow documentation at https://www.oracle.com/java/technologies/downloads/#jdk22-windows
+5) Ensure you can use the `javac` command-line utility. Refer to https://stackoverflow.com/questions/16137713/how-do-i-run-a-java-program-from-the-command-line-on-windows
+6) Navigate to the home folder of `fiji` (this should have folders like `Contents`, `images`, `java`, `licenses`, etc)
+7) Copy `SpeckleLib.jar` into `fiji`'s `jars` folder
+8) Copy `Speckle_TrackerJ.java` into `fiji`'s `plugins` folder
+9) Open a terminal in `fiji`'s `plugins` folder
+10) Compile `Speckle_TrackerJ.java` into `Speckle_TrackerJ.class` using `javac` while including all files in `fiji`'s `jars` folder. On Ubuntu, this is done via the command `javac -cp "../jars/*" Speckle_TrackerJ.java`
+11) Start `fiji` by running the executable in its folder
+12) Ensure that `Speckle TrackerJ` appears in the list of plugins by clicking on the `Plugins` tab
+
+## Python Scripts
+
+1) Clone or download this `git` repository. You can do this via command line by running `git clone https://github.com/jorbDehmel/physicsScripts` or by going to https://github.com/jorbDehmel/physicsScripts and clicking `Code -> Download ZIP`. This repository contains all the python scripts you will need, as well as some useful documentation.
+2) Ensure you have a way to run `python3` scripts (on Linux, this is the `python3` command)
+3) Ensure you have relevant python packages installed. This is done via `pip install pandas matplotlib numpy`
+
 # Workflow
+
+The particle tracking portion (`fiji` and `Speckle TrackerJ`) of this process can be done on any operating system. However, most of these python scripts assume a Linux environment. If you run into issues with these scripts while running on Windows, I suggest installing Windows Subsystem for Linux (WSL). This will probably fix these issues.
 
 1) Receive raw `*.avi` files from FIU via Globus
 2) Re-encode and downscale these using
@@ -41,7 +68,7 @@ jedehmel@mavs.coloradomesa.edu
         this guide
 4) Use speckle tracker to analyse organized files, output
     speckle files
-    1) Open `Fiji` or `ImageJ`
+    1) Open `Fiji`
     2) Open a file explorer
     3) Drag the downsized file into `Fiji` / `ImageJ`. An
         `AVI Reader` window should pop up
@@ -49,10 +76,10 @@ jedehmel@mavs.coloradomesa.edu
         `Use Virtual Stack` is **not** checked
     5) Click `OK` to exit the `AVI Reader` window. A preview
         window should open
-    6) Click `Plugins` -> `Speckle TrackerJ` to open the speckle
+    7) Click `Plugins` -> `Speckle TrackerJ` to open the speckle
         tracker window
-    7) Use `+` and `-` to adjust the zoom
-    8) Click `models` -> `Adjust Parameters`
+    8) Use `+` and `-` to adjust the zoom
+    9) Click `models` -> `Adjust Parameters`
         - The two relevent parameters are `Intensity factor` and
             `Search Size`
         - Lower on either of these makes this go faster, but can
@@ -61,39 +88,48 @@ jedehmel@mavs.coloradomesa.edu
             enough
         - If you leave it on `12.0` pixels, it will take forever
         - If you notice major tracking issues, adjust parameters
-    9) Click `Accept` to go back to the tracking window
-    10) Click `locate` -> `Locate Speckles` to open the speckle
+    10) Click `Accept` to go back to the tracking window
+    11) Click `locate` -> `Locate Speckles` to open the speckle
         finding window
-    11) Adjust `threshold` until all good particles are selected
-    12) Optionally, adjust `minimum distance` to eliminate
+    12) Adjust `threshold` until all good particles are selected
+    13) Optionally, adjust `minimum distance` to eliminate
         clusters
-    13) Click `Accept` to go back to the tracking window
-    14) Click `track` -> `Auto-track All`
+    14) Click `Accept` to go back to the tracking window
+    15) Click `track` -> `Auto-track All`
         - If this takes longer than 30 seconds, adjust
             parameters
         - For `512x512` pixel videos on a medium-grade computer,
             this takes ~1 second if parameters are correct
-    15) Scrub around the video using the left and right arrow
+    16) Scrub around the video using the left and right arrow
         keys
-    16) Switch between tracking models using the up and down
+    17) Switch between tracking models using the up and down
         arrow keys
-    17) Select a track by clicking on it
+    18) Select a track by clicking on it
         - After selection, you can delete the track w/ `d`
         - You can auto-track the selected speckle track w/ `a`
         - You can manually select the next position w/ `t`
-    18) Make sure no conjoined colloids remain in the final data
-    19) Make sure particles are not too jittery
-    20) Make sure particles are in frame for long enough to get
+    19) Make sure no conjoined colloids remain in the final data
+    20) Make sure particles are not too jittery
+    21) Make sure particles are in frame for long enough to get
         good readings
-    21) When done, click `File` -> `Save Speckles` and save
+    22) When done, click `File` -> `Save Speckles` and save
         wherever you the downsized video file is
-    22) Close the speckle tracking window, then close the
+    23) Close the speckle tracking window, then close the
         preview window
-    23) Repeat on next video
-5) Change output speckle files to track files using Python
-    scripts
-6) Use track file resources to extract velocities and whatnot
-7) Use local graphing resources to visualize data
+    24) Repeat on next video
+5) Navigate to the folder containing the python scripts
+6) Change output speckle files to track files using `python3 speckle_to_track.py /path/to/speckle/files`. This can be executed once at the root of all the speckle `csv` files, and will recursively walk through all subfolders. It will print each file it converts.
+7) Apply Brownian straight line speed filter if desired by running `python3 speckle_filterer.py /path/to/tracks/files`
+8) Use graphing resources to visualize data if desired. This can be done via the following commands:
+    - Graph unfiltered data:
+          ```sh
+          python3 speckle_graphing.py "/path/to/tracks" ".*" ".*"
+          ```
+    - Graph only filtered data:
+          ```sh
+          python3 speckle_graphing.py "/path/to/tracks" ".*" ".*(filtered|control).*"
+          ```
+9) The speckle files, track files and filtered track files should all be saved in the original location of the data. The graphing output will be saved in the place where the graphing script was run.
 
 # Resources
 
