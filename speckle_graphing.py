@@ -94,6 +94,8 @@ def main(args: List[str]) -> int:
 
         fixed_files: List[str] = name_fixer.fix_names(labels, candidate_files)
 
+        assert fixed_files[0] is not None
+
         print('Files:')
         for file in fixed_files:
             print(f'\t{file}')
@@ -121,6 +123,8 @@ def main(args: List[str]) -> int:
 
                 i += 1
                 cur_speeds.append(float(row[1]['MEAN_STRAIGHT_LINE_SPEED']))
+
+            assert cur_speeds, f'Failure in {root}/{file}'
 
             speeds += cur_speeds
             means.append(np.mean(cur_speeds))

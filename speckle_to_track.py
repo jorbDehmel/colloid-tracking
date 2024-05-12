@@ -34,12 +34,16 @@ def main() -> int:
 
         print(f'On file {name}')
 
-        to_filepath: str = name.replace('_speckles.csv', '_tracks.csv')
-        speckle.process_file(
-            name,
-            '/tmp/junk.csv',
-            to_filepath,
-            speckle.original_w / speckle.processed_w)
+        try:
+            to_filepath: str = name.replace('_speckles.csv', '_tracks.csv')
+            speckle.process_file(
+                name,
+                '/tmp/junk.csv',
+                to_filepath,
+                speckle.original_w / speckle.processed_w)
+        except:
+            print(f'Failure in {name}')
+            raise
 
     speckle.for_each_file(convert_file, from_filepath, r'.*_speckles\.csv')
 

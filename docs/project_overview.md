@@ -13,6 +13,11 @@ hinting, which may be unfamiliar. If code modification is needed
 and this is unfamiliar, refer
 [here](https://docs.python.org/3/library/typing.html).
 
+**This software should be used in a Linux environment.** If you
+are on Windows, you should use **WSL** (Windows Subsystem for
+Linux). Documentation for setting up WSL is widely available
+online.
+
 These filters should be stable and Windows-compatible, but they
 have been tested on a machine running Arch Linux. If something
 is not working for you, try running it using Windows Subsystem

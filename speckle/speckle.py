@@ -294,7 +294,11 @@ def process_file(input_filepath: str, spots_filepath: str,
     # Process
     text = text.replace('\t', ',')
     text = text.replace('\n', ',\n')
-    text = text.replace(',,', ',')
+
+    while ',,' in text:
+        text = text.replace(',,', ',')
+
+    # print(text,'\n\n')
 
     # Save spots
     with open(spots_filepath, 'w', encoding='utf8') as file:

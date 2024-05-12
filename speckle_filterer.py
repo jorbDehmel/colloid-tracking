@@ -16,7 +16,8 @@ from speckle import filters as f
 
 
 # The RegEx pattern used to detect control files
-control_pattern: str = r'(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control)).*\.csv'
+control_pattern: str = \
+    r'(((?<![0-9])0 ?khz|control).*track|t(0 ?khz|control)).*\.csv'
 
 # The Brownian threshold filter removes any track whose SLS is
 # < BROWNIAN_MEAN_SLS + k * BROWNIAN_STD_SLS
@@ -35,7 +36,9 @@ def main(args: List[str]) -> int:
 
     print('This program will recursively walk through a given',
           'folder and apply a Brownian SLS threshold to every',
-          'item therein.')
+          'item therein. NOTE: This script operates on TRACKS',
+          'not speckles! Ensure you have converted speckles',
+          'first.')
 
     if len(args) != 2:
         print('Please provide 1 command-line argument: The root folder.')
@@ -121,7 +124,7 @@ def main(args: List[str]) -> int:
 
             # Apply Brownian filter
             dropped, remaining = contents.filter(f.sls_threshold_filter,
-                                                sls_threshold=threshold)
+                                                 sls_threshold=threshold)
 
             total_dropped += dropped
             total_remaining += remaining
