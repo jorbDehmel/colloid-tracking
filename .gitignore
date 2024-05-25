@@ -5,6 +5,7 @@ scatters/
 .vscode/
 perm/
 refiltered/
+garbage/
 .mypy_cache/
 .hypothesis/
 .pytest_cache/
