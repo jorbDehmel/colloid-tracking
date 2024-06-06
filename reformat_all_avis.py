@@ -14,9 +14,9 @@ from speckle import speckle
 # Begin Settings
 ################################################################
 
-speckle.original_w = 1024   # The original width of the video
-speckle.processed_w = 512   # The target width of the video
-speckle.encoding = 'mjpeg'  # The (ImageJ compatible) encoding
+#speckle.original_w = 1192   # The original width of the video
+#speckle.processed_w = 256   # The target width of the video
+speckle.encoding = 'mjpeg'   # The (ImageJ compatible) encoding
 
 # Note: The output will also be converted to black and white.
 
