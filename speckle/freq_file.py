@@ -10,10 +10,11 @@ jedehmel@mavs.coloradomesa.edu
 jdehmel@outlook.com
 '''
 
-from typing import List, Optional, Union, Dict, Protocol, Any, Tuple
+from io import StringIO
+from typing import List, Optional, Union, Dict, Protocol, Any, Tuple, Literal
 import pandas as pd
 import numpy as np
-from speckle.speckle import Track
+from speckle.speckle import Track, duration_threshold
 
 
 class BasicTrack:
@@ -244,7 +245,7 @@ class FreqFile:
 
 
 def load_frequency_file(path: str,
-                        file_format: str = 'tracks',
+                        file_format: Literal['tracks', 'speckles'] = 'tracks',
                         pattern: Optional[str] = None,
                         label: Optional[str] = None) -> FreqFile:
     '''
@@ -305,7 +306,40 @@ def load_frequency_file(path: str,
 
     # Load a "speckle"-formatted file.
     else:
-        raise NotImplementedError('Loading a Speckle file has not'
-                                  + 'been implemented yet.')
+
+        # Load input
+        text: str = ''
+        with open(path, 'rb') as file:
+            text = file.read().decode()
+
+        # Process
+        text = text.replace('\t', ',')
+        text = text.replace('\n', ',\n')
+
+        while ',,' in text:
+            text = text.replace(',,', ',')
+
+        # Load data
+        frame: pd.DataFrame = pd.read_csv(StringIO(text))
+
+        cur_track: Track = Track([], [], [])
+
+        is_first: bool = True
+        for row in frame.iterrows():
+            if is_first:
+                is_first = False
+                continue
+
+            if 'stop speckle' in row[0][0]:
+                out.tracks.append(cur_track)
+            elif 'start speckle' in row[0][0]:
+                cur_track = Track([], [], [])
+            else:
+                cur_track.append(float(row[0][0]), float(
+                    row[0][1]), int(row[0][2]))
+
+        # Remove tracks below the duration threshold
+        out.tracks = [track for track in out.tracks
+                      if track.duration() >= duration_threshold]
 
     return out

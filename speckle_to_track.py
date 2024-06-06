@@ -40,7 +40,7 @@ def main() -> int:
                 name,
                 '/tmp/junk.csv',
                 to_filepath,
-                speckle.original_w / speckle.processed_w)
+                1.0) # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
         except:
             print(f'Failure in {name}')
             raise
