@@ -34,6 +34,12 @@ def main(args: List[str]) -> int:
     :returns: 0 upon success, error code upon failure.
     '''
 
+    print('This script will recurively crawl through a folder',
+          'and reformat all *.avi files within. It will save a',
+          'copy of this output in the folder where the ',
+          'original was, AS WELL AS to some specified backup',
+          'folder (provided via command-line arguments).')
+
     if len(args) != 3:
         raise ValueError('Exactly two command line arguments must be provided:',
             'The place to save output, and the folder to operate on.')
