@@ -252,6 +252,8 @@ def main() -> None:
         Rescale the given file
         '''
 
+        nonlocal count
+
         # Recurse if this is a directory
         if os.path.isdir(inp_fp):
             s.for_each_file(rescale_wrapper, inp_fp)
