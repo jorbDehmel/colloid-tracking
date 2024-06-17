@@ -24,11 +24,13 @@ import speckle
 
 files: Dict[str, str] = {
     r'control[0-9]*_tracks\.csv': '0khz',
+    r'0\.3khz[0-9]*_tracks\.csv': '0.3khz',
+    r'0\.4khz[0-9]*_tracks\.csv': '0.4khz',
     r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',
     r'0\.8khz[0-9]*_tracks\.csv': '0.8khz',
     r'1khz[0-9]*_tracks\.csv': '1khz',
     r'2khz[0-9]*_tracks\.csv': '2khz',
-    r'3khz[0-9]*_tracks\.csv': '3khz',
+    r'(?<![\.0-9])3khz[0-9]*_tracks\.csv': '3khz',
     r'(?<![\.0-9])5khz[0-9]*_tracks\.csv': '5khz',
     r'10khz[0-9]*_tracks\.csv': '10khz',
     r'25khz[0-9]*_tracks\.csv': '25khz',
