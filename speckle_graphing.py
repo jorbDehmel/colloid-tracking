@@ -96,8 +96,6 @@ def main(args: List[str]) -> int:
 
         fixed_files: List[str] = name_fixer.fix_names(labels, candidate_files)
 
-        assert fixed_files[0] is not None
-
         print('Files:')
         for file in fixed_files:
             print(f'\t{file}')

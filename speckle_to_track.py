@@ -22,7 +22,8 @@ def main() -> int:
     '''
 
     if len(sys.argv) == 1:
-        print('Please provide 1 command-line argument: The folder to operate in.')
+        print('Please provide 1 command-line argument: '
+              'The folder to operate in.')
         return 1
 
     from_filepath: str = sys.argv[1]
@@ -35,17 +36,19 @@ def main() -> int:
         print(f'On file {name}')
 
         try:
-            to_filepath: str = name.replace('_speckles.csv', '_tracks.csv')
+            to_filepath: str = name.replace('_speckles.csv',
+                                            '_tracks.csv')
             speckle.process_file(
                 name,
                 '/tmp/junk.csv',
                 to_filepath,
                 1.0) # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
-        except:
-            print(f'Failure in {name}')
-            raise
 
-    speckle.for_each_file(convert_file, from_filepath, r'.*_speckles\.csv')
+        except RuntimeError:
+            print(f'Failure in {name}')
+
+    speckle.for_each_file(convert_file, from_filepath,
+                          r'.*_speckles\.csv')
 
     return 0
 

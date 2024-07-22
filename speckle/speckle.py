@@ -346,6 +346,10 @@ def process_file(input_filepath: str, spots_filepath: str,
         arr.append(dummy)
 
         # Followed by real track data
+        if not tracks:
+            raise RuntimeError(f'File {tracks_filepath} (from',
+                               f'{input_filepath}) is empty!')
+
         for k, cur_track in enumerate(tracks):
             cur = [k,
                    cur_track.duration(),
