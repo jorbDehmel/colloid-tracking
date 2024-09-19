@@ -263,6 +263,9 @@ def main() -> None:
         if inp_fp[-4:] != '.csv':
             return
 
+        if 'speckle' not in inp_fp:
+            return
+
         # Otherwise, adjust this file
         try:
             validate_and_adjust_file(inp_fp,
