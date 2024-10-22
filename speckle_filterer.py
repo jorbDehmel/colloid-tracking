@@ -139,6 +139,8 @@ def main(args: List[str]) -> int:
         # Call our function which operates on each file
         s.for_each_file(filter_single_file, dir_path, r'.*track.*\.csv')
 
+    code: int = 0
+
     try:
         # Call our function which operates on each directory
         s.for_each_dir(filter_folder, root)
@@ -157,6 +159,7 @@ def main(args: List[str]) -> int:
 
         else:
             print('ERROR: No points were loaded!')
+            code = 1
 
         if files_skipped:
             print('Overfiltering caused the skippage of',
@@ -166,7 +169,9 @@ def main(args: List[str]) -> int:
             for file in files_skipped:
                 print(f'\t{file}')
 
-    return 0
+            code = 2
+
+    return code
 
 
 if __name__ == '__main__':

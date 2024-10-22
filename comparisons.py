@@ -249,14 +249,23 @@ def graph_each_frequency(root: str,
     pd.DataFrame(data={'sls': all_sls, 'msd': all_msd}).to_csv('sls_vs_msd.csv')
 
 
-if __name__ == '__main__':
+def main(argv: List[str]) -> int:
+    '''
+    Main function
+    :param argv: CLI args
+    :returns: 0 on success, nonzero on failure
+    '''
 
-    if len(sys.argv) != 4:
+    if len(argv) != 4:
         print('Please provide a root folder, a destination folder,',
               'and a file-matching pattern.',
               '(The root folder should contain heightwise subfolders)')
         sys.exit(1)
 
-    graph_each_frequency(sys.argv[1], sys.argv[2], sys.argv[3])
+    graph_each_frequency(argv[1], argv[2], argv[3])
 
     sys.exit(0)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

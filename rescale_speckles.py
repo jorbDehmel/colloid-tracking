@@ -12,7 +12,7 @@ jdehmel@outlook.com
 import os
 import sys
 from io import StringIO
-from typing import Set, Tuple
+from typing import Set, Tuple, List
 import pandas as pd
 import speckle as s
 
@@ -217,7 +217,7 @@ def validate_and_adjust_file(inp_fp: str,
           f'{out_fp} at {out_w}p')
 
 
-def main() -> None:
+def main(argv: List[str]) -> int:
     '''
     Main function.
     '''
@@ -232,13 +232,13 @@ def main() -> None:
     out_w: int = 1192
 
     # Load from args
-    assert len(sys.argv) in (2, 4), \
+    assert len(argv) in (2, 4), \
         'Please provide 1 or 3 arguments.'
-    folder: str = sys.argv[1]
+    folder: str = argv[1]
 
-    if len(sys.argv) == 4:
-        inp_w = int(sys.argv[2])
-        out_w = int(sys.argv[3])
+    if len(argv) == 4:
+        inp_w = int(argv[2])
+        out_w = int(argv[3])
 
     print(f'Reformatting files from {inp_w}p to {out_w}p in',
           f'folder {folder}.')
@@ -278,6 +278,8 @@ def main() -> None:
     s.for_each_file(rescale_wrapper, folder)
     print(f'Reformatted {count} speckle files.')
 
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main(sys.argv))
