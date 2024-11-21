@@ -24,6 +24,7 @@ import speckle
 
 files: Dict[str, str] = {
     r'control[0-9]*_tracks\.csv': '0khz',
+    r'0\.2khz[0-9]*_tracks\.csv': '0.2khz',
     r'0\.3khz[0-9]*_tracks\.csv': '0.3khz',
     r'0\.4khz[0-9]*_tracks\.csv': '0.4khz',
     r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',

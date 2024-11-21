@@ -1,0 +1,27 @@
+@startuml revised-workflow
+
+folder FIU {
+    node "Experiments" as A
+}
+
+node "Video Files" as B
+
+folder CMU {
+    node "Preprocessing" as C
+    node "Particle Tracking" as D
+    node "Postprocessing" as E
+    node "Filtering" as F
+}
+
+node "Usable Raw Data" as G
+node "Data Visualization" as H
+
+A --> B
+B --> C
+C -> D
+D -> E
+E -> F
+F --> G
+G --> H
+
+@enduml

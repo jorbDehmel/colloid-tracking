@@ -39,7 +39,9 @@ z_position_filters: List[str] = [r'8940', r'8960', r'8965', r'8980', r'8985',
 
 # The voltage filters to use
 voltages: Dict[str, str] = {r'(?<!1)5[_ ]?[vV]': '5v',
+                            r'7[_ ]?[vV]': '7v',
                             r'8[_ ]?[vV]': '8v',
+                            r'9[_ ]?[vV]': '9v',
                             r'10[_ ]?[vV]': '10v',
                             r'12[_ ]?[vV]': '12v',
                             r'15[_ ]?[vV]': '15v',
@@ -52,6 +54,7 @@ control_pattern: str = r'control[0-9]*_tracks\.csv'
 frequencies: Dict[str, str] = {
     control_pattern: '0khz',
     r'0\.5khz[0-9]*': '0.5khz',
+    r'0\.2khz[0-9]*': '0.2khz',
     r'0\.3khz[0-9]*_tracks\.csv': '0.3khz',
     r'0\.4khz[0-9]*_tracks\.csv': '0.4khz',
     r'0\.8khz[0-9]*': '0.8khz',

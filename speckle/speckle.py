@@ -178,7 +178,7 @@ encoding: str = 'mjpeg'
 # If set to 0, does no duration thresholding. Otherwise,
 # automatically drops any track w/ frame duration less than this
 # value.
-duration_threshold: int = 30
+duration_threshold: int = 10
 
 
 def for_each_file(apply: Callable[[str], None],
