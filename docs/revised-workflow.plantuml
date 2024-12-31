@@ -1,27 +1,36 @@
 @startuml revised-workflow
 
 folder FIU {
-    node "Experiments" as A
+    node "Experiments" as experiments
 }
 
-node "Video Files" as B
+node "Video files" as vidfiles
 
 folder CMU {
-    node "Preprocessing" as C
-    node "Particle Tracking" as D
-    node "Postprocessing" as E
-    node "Filtering" as F
+    node "Shrink videos for efficiency" as shrink
+    node "Convert videos to usable encoding via ffmpeg" as reencode
+    node "Convert videos to black and white via ffmpeg" as bw
+    node "Particle tracking via SpeckleTrackerJ" as tracking
+    node "Rescale particles to original size" as postprocessing
+
+    node "Filter out any tracks with straight-line-speed lower than Brownian" as brownian
+    node "Filter out any outlier tracks (outside of 2 standard deviations)" as outliers
+    node "Examine data, apply optional additional filters as needed" as examine
 }
 
-node "Usable Raw Data" as G
-node "Data Visualization" as H
+node "Usable Raw Data" as rawdata
+node "Data Visualization" as datavis
 
-A --> B
-B --> C
-C -> D
-D -> E
-E -> F
-F --> G
-G --> H
+experiments -> vidfiles
+vidfiles --> shrink
+shrink -> reencode
+reencode --> bw
+tracking <- bw
+tracking --> postprocessing
+postprocessing -> brownian
+brownian --> outliers
+examine <- outliers
+examine --> rawdata
+rawdata -> datavis
 
 @enduml
