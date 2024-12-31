@@ -54,6 +54,10 @@ def validate_dimensions_for_data(filepath: str,
     with open(filepath, 'rb') as file:
         text = file.read().decode()
 
+    if 'speckle' not in text:
+        print(f'SKIPPING NON-SPECKLE FILE {filepath}')
+        return
+
     # Process
     text = text.replace('\t', ',')
     text = text.replace('\n', ',\n')
@@ -184,6 +188,8 @@ def validate_and_adjust_file(inp_fp: str,
     then validates the output dataTuple. If any of these steps
     fail, an assertion error will be thrown.
     '''
+
+    print(f'Rescaling {inp_fp}')
 
     try:
         validate_dimensions_for_data(inp_fp, out_w)

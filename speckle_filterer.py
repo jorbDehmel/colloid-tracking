@@ -80,7 +80,7 @@ def main(args: List[str]) -> int:
 
         s.for_each_file(find, dir_path, r'.*' + control_pattern)
 
-        if not fq_control_path:
+        if not fq_control_path or not fq_control_path.endswith('.csv'):
             print('Failed to find control file.')
             return
 
@@ -111,6 +111,10 @@ def main(args: List[str]) -> int:
 
             # Do not operate on already-filtered files
             if 'filtered' in file_path:
+                return
+
+            # Do not operate on non-csv's
+            if not file_path.endswith('.csv'):
                 return
 
             # IDK why this is necessary?

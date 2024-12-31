@@ -134,7 +134,7 @@ def graph_each_frequency(root: str,
             nonlocal means, stds, title, all_sls, all_msd
 
             # Skip non-matching
-            if not re.findall(pattern, file) or 'ANOMALY' in file:
+            if not re.findall(pattern, file) or 'ANOMALY' in file or not file.endswith('.csv') or '/graphs/' in file:
                 print(f'Rejected file {file}')
                 return
 
@@ -239,17 +239,6 @@ def graph_each_frequency(root: str,
     plt.savefig(saveat + '/chamber_height.png', bbox_inches='tight')
 
     plt.close()
-
-    plt.clf()
-    plt.title(f'SLS vs. MSD (N = {len(all_sls)})')
-    plt.scatter(all_sls, all_msd, s=1.0)
-    plt.xlabel('SLS')
-    plt.ylabel('MSD')
-    plt.savefig(saveat + '/sls_vs_msd.png')
-
-    plt.close()
-
-    pd.DataFrame(data={'sls': all_sls, 'msd': all_msd}).to_csv('sls_vs_msd.csv')
 
 
 def main(argv: List[str]) -> int:

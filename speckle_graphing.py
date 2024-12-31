@@ -76,6 +76,10 @@ def main(args: List[str]) -> int:
         :param root: The folder to use
         '''
 
+        if root.endswith('/graphs'):
+            print(f'Skipping graph dir {root}')
+            return
+
         print(f'Graphing folder {root}...')
 
         i: int = 0
