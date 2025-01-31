@@ -14,6 +14,7 @@ import speckle_filterer
 import speckle_graphing
 import comparisons
 import speckle_const_sls_filter
+import collate_without_graphing
 
 
 def main() -> int:
@@ -30,7 +31,7 @@ def main() -> int:
           'Brownian filtering, and produce graphs. In\n' +
           'theory, no other scripts should be necessary\n' +
           'when using this one.\n\n' +
-          'Jordan Dehmel, 2024\n' +
+          'Jordan Dehmel, 2023-2025\n' +
           'Colorado Mesa University\n')
 
     # Do system checks
@@ -67,12 +68,12 @@ def main() -> int:
               'will have no effect.\n')
 
         # Make everything (recursively) lowercase
-        # (Embarressingly brute-force way.
+        # (Embarrassingly brute-force way.
         # Turn your head, anyone who respects me)
         for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
             cmd: str = (f'find {where_to_operate} -depth ' +
-                f'-iname "*{c}*" -exec rename --all "{c}" ' +
-                f'"{c.lower()}" "{{}}" \\;')
+                        f'-iname "*{c}*" -exec rename --all "{c}" ' +
+                        f'"{c.lower()}" "{{}}" \\;')
             assert os.system(cmd) == 0
 
         # Remove spaces
@@ -117,14 +118,20 @@ def main() -> int:
 
     else:
         # Rescale speckles
-        assert rescale_speckles.main(
-            ['', where_to_operate]) == 0
+        print('Rescaling speckles...')
+        try:
+            assert rescale_speckles.main(
+                ['', where_to_operate]) == 0
+        except AssertionError:
+            print('WARNING: Rescaling exited with error!')
 
         # Convert to tracks
+        print('Converting speckles to tracks...')
         assert speckle_to_track.main(
             ['', where_to_operate]) == 0
 
         # Filter tracks
+        print('Filtering tracks...')
         filter_res: int = speckle_filterer.main(
             ['', where_to_operate])
 
@@ -147,6 +154,24 @@ def main() -> int:
                 print('No filter could be applied; Halting.')
                 return -512
 
+        # Simple extraction, before complicated version
+        print('Collating and saving means and stds...')
+        try:
+            collate_without_graphing.main(
+                ['', where_to_operate,
+                 where_to_operate + '/filtered_means.csv',
+                 r'.*(filtered|control.*)\.csv'])
+            collate_without_graphing.main(
+                ['', where_to_operate,
+                 where_to_operate + '/all_means.csv', ''])
+            print('Means and stds have been collated.')
+        except (AssertionError, RuntimeError, KeyError):
+            print('Warning: Failed to collate info')
+
+        if input('Graph? [y/N]: ').lower()[0] != 'y':
+            print('Exiting without graphing.')
+            return 0
+
         os.chdir(where_to_operate)
 
         # Local graphs
@@ -154,9 +179,15 @@ def main() -> int:
             [f for f in os.listdir() if os.path.isdir(f)]
 
         for voltage_dir in voltage_dirs:
+            os.chdir(where_to_operate)
+
             # Create graphs
             assert speckle_graphing.main(
                 ['', voltage_dir, '.*',
+                 '.*(filtered|control).*']) == 0
+
+            assert comparisons.main(
+                ['', voltage_dir, voltage_dir,
                  '.*(filtered|control).*']) == 0
 
             # Organize graphs
