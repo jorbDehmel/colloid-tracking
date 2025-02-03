@@ -58,7 +58,7 @@ def main() -> int:
 
     have_tracked: bool = input(
         'Have speckle files already been extracted? [y/n] '
-        ).lower() == 'y'
+    ).lower() == 'y'
 
     if not have_tracked:
         # Reformat AVIs
@@ -99,7 +99,7 @@ def main() -> int:
 
         do_erase: bool = input(
             'Replace originals w/ formatted? [y/n] '
-            ).lower() == 'y'
+        ).lower() == 'y'
 
         if do_erase:
             # Delete originals
@@ -165,7 +165,8 @@ def main() -> int:
                 ['', where_to_operate,
                  where_to_operate + '/all_means.csv', ''])
             print('Means and stds have been collated.')
-        except (AssertionError, RuntimeError, KeyError):
+        except Exception as e:
+            print(e)
             print('Warning: Failed to collate info')
 
         if input('Graph? [y/N]: ').lower()[0] != 'y':

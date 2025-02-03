@@ -253,6 +253,7 @@ def main(argv: List[str]) -> int:
         == 'YES, DO IT', 'Aborting...'
 
     count: int = 0
+
     def rescale_wrapper(inp_fp: str) -> None:
         '''
         Rescale the given file

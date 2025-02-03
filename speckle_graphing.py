@@ -9,7 +9,7 @@ python3 speckle_graphing.py ~/data/2-21-2024-data/120um/8v/ \
 
 Only non-filtered:
 python3 speckle_graphing.py ~/data/2-21-2024-data/120um/8v/ \
-    '.*' '.*_tracks\.csv$'
+    '.*' '.*_tracks\\.csv$'
 '''
 
 import sys
@@ -24,20 +24,20 @@ import speckle
 
 files: Dict[str, str] = {
     r'control[0-9]*_tracks\.csv': '0khz',
-    r'0\.2khz[0-9]*_tracks\.csv': '0.2khz',
-    r'0\.3khz[0-9]*_tracks\.csv': '0.3khz',
-    r'0\.4khz[0-9]*_tracks\.csv': '0.4khz',
-    r'0\.5khz[0-9]*_tracks\.csv': '0.5khz',
-    r'0\.8khz[0-9]*_tracks\.csv': '0.8khz',
-    r'1khz[0-9]*_tracks\.csv': '1khz',
-    r'2khz[0-9]*_tracks\.csv': '2khz',
+    r'(?<![\.0-9])0\.2khz[0-9]*_tracks\.csv': '0.2khz',
+    r'(?<![\.0-9])0\.3khz[0-9]*_tracks\.csv': '0.3khz',
+    r'(?<![\.0-9])0\.4khz[0-9]*_tracks\.csv': '0.4khz',
+    r'(?<![\.0-9])0\.5khz[0-9]*_tracks\.csv': '0.5khz',
+    r'(?<![\.0-9])0\.8khz[0-9]*_tracks\.csv': '0.8khz',
+    r'(?<![\.0-9])1khz[0-9]*_tracks\.csv': '1khz',
+    r'(?<![\.0-9])2khz[0-9]*_tracks\.csv': '2khz',
     r'(?<![\.0-9])3khz[0-9]*_tracks\.csv': '3khz',
     r'(?<![\.0-9])5khz[0-9]*_tracks\.csv': '5khz',
-    r'10khz[0-9]*_tracks\.csv': '10khz',
-    r'25khz[0-9]*_tracks\.csv': '25khz',
-    r'50khz[0-9]*_tracks\.csv': '50khz',
-    r'75khz[0-9]*_tracks\.csv': '75khz',
-    r'100khz[0-9]*_tracks\.csv': '100khz'}
+    r'(?<![\.0-9])10khz[0-9]*_tracks\.csv': '10khz',
+    r'(?<![\.0-9])25khz[0-9]*_tracks\.csv': '25khz',
+    r'(?<![\.0-9])50khz[0-9]*_tracks\.csv': '50khz',
+    r'(?<![\.0-9])75khz[0-9]*_tracks\.csv': '75khz',
+    r'(?<![\.0-9])100khz[0-9]*_tracks\.csv': '100khz'}
 
 
 graphing_duration_threshold: int = 0

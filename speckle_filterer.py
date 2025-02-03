@@ -153,13 +153,12 @@ def main(args: List[str]) -> int:
 
         if total_dropped + total_remaining:
             percentage_dropped: float = total_dropped / (total_dropped
-                                                        + total_remaining)
+                                                         + total_remaining)
             percentage_dropped *= 100.0
             percentage_dropped = round(percentage_dropped, 5)
 
             print(f'Of {total_dropped + total_remaining}, dropped {total_dropped}',
-                f'({percentage_dropped}%)',
-                f'with k = {k}')
+                  f'({percentage_dropped}%)', f'with k = {k}')
 
         else:
             print('ERROR: No points were loaded!')

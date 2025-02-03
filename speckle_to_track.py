@@ -43,7 +43,7 @@ def main(argv: List[str]) -> int:
                 name,
                 '/tmp/junk.csv',
                 to_filepath,
-                1.0) # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
+                1.0)  # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
 
         except RuntimeError:
             print(f'Failure in {name}')

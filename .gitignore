@@ -9,9 +9,10 @@ garbage/
 .mypy_cache/
 .hypothesis/
 .pytest_cache/
+legacy/
 out/
 tk
-.coverage
+.coverage*
 *.png
 *.csv
 *.pickle

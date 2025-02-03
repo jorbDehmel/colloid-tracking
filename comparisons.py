@@ -53,20 +53,20 @@ skip_voltage: bool = False
 control_pattern: str = r'control[0-9]*_tracks\.csv'
 frequencies: Dict[str, str] = {
     control_pattern: '0khz',
-    r'0\.5khz[0-9]*': '0.5khz',
-    r'0\.2khz[0-9]*': '0.2khz',
-    r'0\.3khz[0-9]*_tracks\.csv': '0.3khz',
-    r'0\.4khz[0-9]*_tracks\.csv': '0.4khz',
-    r'0\.8khz[0-9]*': '0.8khz',
-    r'1khz[0-9]*': '1khz',
-    r'2khz[0-9]*': '2khz',
+    r'(?<![\.0-9])0\.5khz[0-9]*': '0.5khz',
+    r'(?<![\.0-9])0\.2khz[0-9]*': '0.2khz',
+    r'(?<![\.0-9])0\.3khz[0-9]*_tracks\.csv': '0.3khz',
+    r'(?<![\.0-9])0\.4khz[0-9]*_tracks\.csv': '0.4khz',
+    r'(?<![\.0-9])0\.8khz[0-9]*': '0.8khz',
+    r'(?<![\.0-9])1khz[0-9]*': '1khz',
+    r'(?<![\.0-9])2khz[0-9]*': '2khz',
     r'(?<![\.0-9])3khz[0-9]*': '3khz',
     r'(?<![\.0-9])5khz[0-9]*': '5khz',
-    r'10khz[0-9]*': '10khz',
-    r'25khz[0-9]*': '25khz',
-    r'50khz[0-9]*': '50khz',
-    r'75khz[0-9]*': '75khz',
-    r'100khz[0-9]*': '100khz'}
+    r'(?<![\.0-9])10khz[0-9]*': '10khz',
+    r'(?<![\.0-9])25khz[0-9]*': '25khz',
+    r'(?<![\.0-9])50khz[0-9]*': '50khz',
+    r'(?<![\.0-9])75khz[0-9]*': '75khz',
+    r'(?<![\.0-9])100khz[0-9]*': '100khz'}
 
 
 def clean_pattern(what: str, replacement: str = '_', exclude: str = '') -> str:
@@ -134,7 +134,16 @@ def graph_each_frequency(root: str,
             nonlocal means, stds, title, all_sls, all_msd
 
             # Skip non-matching
-            if not re.findall(pattern, file) or 'ANOMALY' in file or not file.endswith('.csv') or '/graphs/' in file:
+            if not re.findall(pattern, file):
+                print(f'Rejected file {file}')
+                return
+            elif 'ANOMALY' in file:
+                print(f'Rejected file {file}')
+                return
+            elif not file.endswith('.csv'):
+                print(f'Rejected file {file}')
+                return
+            elif '/graphs/' in file:
                 print(f'Rejected file {file}')
                 return
 
@@ -149,7 +158,8 @@ def graph_each_frequency(root: str,
 
             if 'MEAN_SQUARED_DISPLACEMENT' in tracks:
                 all_sls += list(speeds)
-                all_msd += list(tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float))
+                all_msd += list(
+                    tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float))
             else:
                 print('Failed to find MSD entries.')
 
@@ -198,10 +208,11 @@ def graph_each_frequency(root: str,
         plt.xlabel('Chamber Height')
         plt.ylabel('Mean Straight Line Speed')
 
-        plt.plot(cleaned_keys, [means[key] for key in keys], label=clean_pattern(frequency))
+        plt.plot(cleaned_keys, [means[key] for key in keys],
+                 label=clean_pattern(frequency))
         plt.errorbar(x=cleaned_keys,
-                 y=[means[key] for key in keys],
-                 yerr=[stds[key] for key in keys])
+                     y=[means[key] for key in keys],
+                     yerr=[stds[key] for key in keys])
 
         plt.legend()
         plt.savefig(saveat + '/'
@@ -220,8 +231,8 @@ def graph_each_frequency(root: str,
             'MEAN_STRAIGHT_LINE_SPEED': [means[key] for key in keys],
             'STRAIGHT_LINE_SPEED_STD': [stds[key] for key in keys],
         }).to_csv(saveat + '/'
-            + clean_pattern(frequency, '', '.')
-            + '_chamber_height.csv')
+                  + clean_pattern(frequency, '', '.')
+                  + '_chamber_height.csv')
 
     plt.clf()
 
@@ -235,7 +246,7 @@ def graph_each_frequency(root: str,
                      yerr=stds,
                      label=clean_pattern(frequency))
 
-    plt.legend(bbox_to_anchor=(1,1), loc="upper left")
+    plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
     plt.savefig(saveat + '/chamber_height.png', bbox_inches='tight')
 
     plt.close()
