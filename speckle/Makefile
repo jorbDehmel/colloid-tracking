@@ -9,7 +9,8 @@ all:	type-check style-check test
 
 .PHONY:	type-check
 type-check:
-	mypy --strict --allow-untyped-decorators --ignore-missing-imports .
+	mypy --strict --allow-untyped-decorators \
+		--ignore-missing-imports
 
 .PHONY:	style-check
 style-check:
@@ -17,4 +18,4 @@ style-check:
 
 .PHONY:	test
 test:
-	pytest --cov --cov-report term-missing .
+	pytest --cov --cov-report term-missing

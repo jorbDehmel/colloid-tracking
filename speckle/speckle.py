@@ -178,7 +178,7 @@ encoding: str = 'mjpeg'
 # If set to 0, does no duration thresholding. Otherwise,
 # automatically drops any track w/ frame duration less than this
 # value.
-duration_threshold: int = 30
+duration_threshold: int = 10
 
 
 def for_each_file(apply: Callable[[str], None],
@@ -346,6 +346,10 @@ def process_file(input_filepath: str, spots_filepath: str,
         arr.append(dummy)
 
         # Followed by real track data
+        if not tracks:
+            raise RuntimeError(f'File {tracks_filepath} (from',
+                               f'{input_filepath}) is empty!')
+
         for k, cur_track in enumerate(tracks):
             cur = [k,
                    cur_track.duration(),

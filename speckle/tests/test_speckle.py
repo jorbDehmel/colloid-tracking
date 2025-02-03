@@ -226,7 +226,6 @@ class TestMiscSpeckleFunctions(unittest.TestCase):
         Tests load_frequency_file from freq_file.py.
         '''
 
-        s.load_frequency_file(self.tracks_path)
+        s.load_frequency_file(self.speckles_path, 'speckles')
 
-        with self.assertRaises(NotImplementedError):
-            s.load_frequency_file(self.speckles_path, 'speckles')
+        s.load_frequency_file(self.tracks_path, 'tracks')

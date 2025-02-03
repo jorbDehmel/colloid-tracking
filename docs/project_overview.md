@@ -77,8 +77,7 @@ The particle tracking portion (`fiji` and `Speckle TrackerJ`) of this process ca
     2) Open a file explorer
     3) Drag the downsized file into `Fiji` / `ImageJ`. An
         `AVI Reader` window should pop up
-    4) Make sure that `Convert to Grayscale` is checked, and
-        `Use Virtual Stack` is **not** checked
+    4) Make sure that `Use Virtual Stack` is **not** checked
     5) Click `OK` to exit the `AVI Reader` window. A preview
         window should open
     7) Click `Plugins` -> `Speckle TrackerJ` to open the speckle
@@ -123,9 +122,10 @@ The particle tracking portion (`fiji` and `Speckle TrackerJ`) of this process ca
         preview window
     24) Repeat on next video
 5) Navigate to the folder containing the python scripts
-6) Change output speckle files to track files using `python3 speckle_to_track.py /path/to/speckle/files`. This can be executed once at the root of all the speckle `csv` files, and will recursively walk through all subfolders. It will print each file it converts.
-7) Apply Brownian straight line speed filter if desired by running `python3 speckle_filterer.py /path/to/tracks/files`
-8) Use graphing resources to visualize data if desired. This can be done via the following commands:
+6) Rescale the speckles back to their original size using `python3 rescale_speckles.py /path/to/speckle/files`. **This is extremely important to do!**
+7) Change output speckle files to track files using `python3 speckle_to_track.py /path/to/speckle/files`. This can be executed once at the root of all the speckle `csv` files, and will recursively walk through all subfolders. It will print each file it converts.
+8) Apply Brownian straight line speed filter if desired by running `python3 speckle_filterer.py /path/to/tracks/files`
+9) Use graphing resources to visualize data if desired. This can be done via the following commands:
     - Graph unfiltered data:
           ```sh
           python3 speckle_graphing.py "/path/to/tracks" ".*" ".*"
@@ -134,7 +134,11 @@ The particle tracking portion (`fiji` and `Speckle TrackerJ`) of this process ca
           ```sh
           python3 speckle_graphing.py "/path/to/tracks" ".*" ".*(filtered|control).*"
           ```
-9) The speckle files, track files and filtered track files should all be saved in the original location of the data. The graphing output will be saved in the place where the graphing script was run.
+    - Graph comparisons:
+          ```sh
+          python3 comparisons.py "/path/to/tracks" . ".*(filtered|control).*"
+          ```
+10) The speckle files, track files and filtered track files should all be saved in the original location of the data. The graphing output will be saved in the place where the graphing script was run.
 
 # Resources
 

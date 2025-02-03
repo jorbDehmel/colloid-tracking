@@ -38,7 +38,8 @@ def fix_names(patterns: List[str],
                 if out[i] is not None:
                     continue
 
-                if re.search(pattern, name) and name[-4:] == '.csv' and name[0] != '_':
+                if re.search(pattern,
+                             name) and name[-4:] == '.csv' and name[0] != '_':
                     out[i] = name
 
     else:
@@ -192,7 +193,7 @@ def main() -> int:
     output_value = fix_names(patterns)
 
     print(output_value)
-    
+
     return 0
 
 

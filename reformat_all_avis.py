@@ -14,8 +14,8 @@ from speckle import speckle
 # Begin Settings
 ################################################################
 
-#speckle.original_w = 1192   # The original width of the video
-#speckle.processed_w = 256   # The target width of the video
+# speckle.original_w = 1192   # The original width of the video
+# speckle.processed_w = 256   # The target width of the video
 speckle.encoding = 'mjpeg'   # The (ImageJ compatible) encoding
 
 # Note: The output will also be converted to black and white.
@@ -41,7 +41,8 @@ def main(args: List[str]) -> int:
           'folder (provided via command-line arguments).')
 
     if len(args) != 3:
-        raise ValueError('Exactly two command line arguments must be provided:',
+        raise ValueError(
+            'Exactly two command line arguments must be provided:',
             'The place to save output, and the folder to operate on.')
 
     # A constant folder to copy all avi files to after formatting.

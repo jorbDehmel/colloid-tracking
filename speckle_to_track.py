@@ -9,6 +9,7 @@ jedehmel@mavs.coloradomesa.edu
 
 import sys
 import speckle
+from typing import List
 
 
 # Note: This is a very important filter! It's not a good idea to
@@ -16,16 +17,17 @@ import speckle
 speckle.duration_threshold = 30
 
 
-def main() -> int:
+def main(argv: List[str]) -> int:
     '''
     Main function for use when this is called as a script
     '''
 
-    if len(sys.argv) == 1:
-        print('Please provide 1 command-line argument: The folder to operate in.')
+    if len(argv) == 1:
+        print('Please provide 1 command-line argument: '
+              'The folder to operate in.')
         return 1
 
-    from_filepath: str = sys.argv[1]
+    from_filepath: str = argv[1]
 
     def convert_file(name: str) -> None:
         '''
@@ -35,20 +37,22 @@ def main() -> int:
         print(f'On file {name}')
 
         try:
-            to_filepath: str = name.replace('_speckles.csv', '_tracks.csv')
+            to_filepath: str = name.replace('_speckles.csv',
+                                            '_tracks.csv')
             speckle.process_file(
                 name,
                 '/tmp/junk.csv',
                 to_filepath,
-                1.0) # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
-        except:
-            print(f'Failure in {name}')
-            raise
+                1.0)  # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
 
-    speckle.for_each_file(convert_file, from_filepath, r'.*_speckles\.csv')
+        except RuntimeError:
+            print(f'Failure in {name}')
+
+    speckle.for_each_file(convert_file, from_filepath,
+                          r'.*_speckles\.csv')
 
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv))
