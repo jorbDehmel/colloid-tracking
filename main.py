@@ -45,11 +45,6 @@ def main() -> int:
               '/install')
         return -128
 
-    if os.system('ffmpeg -version > /dev/null') != 0:
-        print('Missing package "ffmpeg". Please use your ' +
-              'local package manager to install it.')
-        return -256
-
     where_to_operate: str = input('Path to folder: ')
     where_to_operate = os.path.realpath(where_to_operate)
 
@@ -57,7 +52,7 @@ def main() -> int:
     assert os.path.isdir(where_to_operate)
 
     have_tracked: bool = input(
-        'Have speckle files already been extracted? [y/n] '
+        'Have speckle files already been extracted? [y/N] '
     ).lower() == 'y'
 
     if not have_tracked:
@@ -67,13 +62,18 @@ def main() -> int:
         print('Note: Running this on already-formatted files ' +
               'will have no effect.\n')
 
+        if os.system('ffmpeg -version > /dev/null') != 0:
+            print('Missing package "ffmpeg". Please use your ' +
+                  'local package manager to install it.')
+            return -256
+
         # Make everything (recursively) lowercase
         # (Embarrassingly brute-force way.
         # Turn your head, anyone who respects me)
         for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
             cmd: str = (f'find {where_to_operate} -depth ' +
-                        f'-iname "*{c}*" -exec rename --all "{c}" ' +
-                        f'"{c.lower()}" "{{}}" \\;')
+                        f'-iname "*{c}*" -exec rename --all ' +
+                        f'"{c}" "{c.lower()}" "{{}}" \\;')
             assert os.system(cmd) == 0
 
         # Remove spaces
@@ -118,56 +118,57 @@ def main() -> int:
 
     else:
         # Rescale speckles
-        print('Rescaling speckles...')
-        try:
-            assert rescale_speckles.main(
-                ['', where_to_operate]) == 0
-        except AssertionError:
-            print('WARNING: Rescaling exited with error!')
+        if input('Rescale speckles? [y/N]: ').lower() == 'y':
+            print('Rescaling speckles...')
+            try:
+                assert rescale_speckles.main(
+                    ['', where_to_operate]) == 0
+            except AssertionError:
+                print('WARNING: Rescaling exited with error!')
 
         # Convert to tracks
-        print('Converting speckles to tracks...')
-        assert speckle_to_track.main(
-            ['', where_to_operate]) == 0
+        if input('Convert to tracks? [y/N]: ').lower() == 'y':
+            print('Converting speckles to tracks...')
+            assert speckle_to_track.main(
+                ['', where_to_operate]) == 0
 
         # Filter tracks
-        print('Filtering tracks...')
-        filter_res: int = speckle_filterer.main(
-            ['', where_to_operate])
+        if input('Filter tracks? [y/N]: ').lower() == 'y':
+            print('Filtering tracks...')
+            filter_res: int = speckle_filterer.main(
+                ['', where_to_operate])
 
-        if filter_res != 0:
-            print('Potentially lethal filtering error(s) ' +
-                  'occurred! Please check log!')
+            if filter_res != 0:
+                print('Potentially lethal filtering error(s) ' +
+                      'occurred! Please check log!')
 
-            do_const_sls_filter: bool = input(
-                'Apply constant SLS filter instead of ' +
-                'Brownian? [y/n] ').lower() == 'y'
+                do_const_sls_filter: bool = input(
+                    'Apply constant SLS filter instead of ' +
+                    'Brownian? [y/n] ').lower() == 'y'
 
-            if do_const_sls_filter:
-                threshold: float = float(
-                    input('SLS threshold: '))
+                if do_const_sls_filter:
+                    threshold: float = float(
+                        input('SLS threshold: '))
 
-                assert speckle_const_sls_filter.main(
-                    ['', where_to_operate, threshold]) == 0
+                    assert speckle_const_sls_filter.main(
+                        ['', where_to_operate, threshold]) == 0
 
-            else:
-                print('No filter could be applied; Halting.')
-                return -512
+                else:
+                    print(
+                        'No filter could be applied.')
 
         # Simple extraction, before complicated version
-        print('Collating and saving means and stds...')
-        try:
+        if input('Collate all data? [y/N]: ').lower()[0] == 'y':
+            print('Collating and saving means and stds...')
+
             collate_without_graphing.main(
                 ['', where_to_operate,
-                 where_to_operate + '/filtered_means.csv',
-                 r'.*(filtered|control.*)\.csv'])
+                    where_to_operate + '/filtered_means.csv',
+                    r'.*(filtered|control.*)\.csv'])
             collate_without_graphing.main(
                 ['', where_to_operate,
-                 where_to_operate + '/all_means.csv', ''])
+                    where_to_operate + '/all_means.csv', ''])
             print('Means and stds have been collated.')
-        except Exception as e:
-            print(e)
-            print('Warning: Failed to collate info')
 
         if input('Graph? [y/N]: ').lower()[0] != 'y':
             print('Exiting without graphing.')
@@ -180,33 +181,38 @@ def main() -> int:
             [f for f in os.listdir() if os.path.isdir(f)]
 
         for voltage_dir in voltage_dirs:
-            os.chdir(where_to_operate)
+            if voltage_dir == 'graphs':
+                continue
+
+            print(f'On voltage dir {voltage_dir}...')
+            old_dir = os.getcwd()
+            os.chdir(voltage_dir)
+
+            # Organize graphs
+            if not os.path.exists('graphs'):
+                os.mkdir('graphs')
 
             # Create graphs
             assert speckle_graphing.main(
-                ['', voltage_dir, '.*',
+                ['', '.', '.*',
                  '.*(filtered|control).*']) == 0
 
             assert comparisons.main(
-                ['', voltage_dir, voltage_dir,
+                ['', '.', '.',
                  '.*(filtered|control).*']) == 0
 
-            # Organize graphs
-            if not os.path.exists(f'{voltage_dir}/graphs/'):
-                os.mkdir(f'{voltage_dir}/graphs/')
-
-            assert os.system(
-                f'mv *.csv *.png {voltage_dir}/graphs/') == 0
+            assert os.system('mv *.csv *.png graphs/') == 0
 
             # Rename graphs
-            all_items: List[str] = \
-                os.listdir(f'{voltage_dir}/graphs')
+            all_items: List[str] = os.listdir('graphs/')
 
             common_prefix: str = os.path.commonprefix(all_items)
 
             assert os.system(
-                f'find {voltage_dir}/graphs -type f -exec ' +
+                'find graphs -type f -exec ' +
                 f'rename "{common_prefix}" "" {{}} \\;') == 0
+
+            os.chdir(old_dir)
 
         assert comparisons.main(
             ['', '.', '.', '.*(filtered|control).*']) == 0
@@ -225,6 +231,8 @@ def main() -> int:
         assert os.system(
             'find graphs -type f -exec rename ' +
             f'"{common_prefix}" "" {{}} \\;') == 0
+
+    print('Done!')
 
     return 0
 

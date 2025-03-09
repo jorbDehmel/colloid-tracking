@@ -263,11 +263,11 @@ def main(argv: List[str]) -> int:
         print('Please provide a root folder, a destination folder,',
               'and a file-matching pattern.',
               '(The root folder should contain heightwise subfolders)')
-        sys.exit(1)
+        assert False
 
     graph_each_frequency(argv[1], argv[2], argv[3])
 
-    sys.exit(0)
+    return 0
 
 
 if __name__ == '__main__':

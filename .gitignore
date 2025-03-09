@@ -2,7 +2,6 @@ special/
 __pycache__/
 filtering/
 scatters/
-.vscode/
 perm/
 refiltered/
 garbage/
