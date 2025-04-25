@@ -1,0 +1,23 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Colloid Tracking
+message: >-
+  This software represents a collation of Python scripts for the
+  tracking and analysis of colloids. It mostly uses data output
+  by SpeckleTrackerJ.
+type: software
+authors:
+  - given-names: Jordan
+    family-names: Dehmel
+    email: jdehmel@outlook.com
+    affiliation: Colorado Mesa University
+    orcid: 'https://orcid.org/0009-0002-0982-8149'
+repository-code: 'https://github.com/jorbDehmel/colloid-tracking'
+keywords:
+  - Colloid
+  - Active matter
+  - Molecular dynamics
+  - Data analysis
+license: MIT
