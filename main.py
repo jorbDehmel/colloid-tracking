@@ -43,7 +43,6 @@ def main() -> int:
               'WSL shell.\n' +
               'https://learn.microsoft.com/en-us/windows/wsl' +
               '/install')
-        return -128
 
     where_to_operate: str = input('Path to folder: ')
     where_to_operate = os.path.realpath(where_to_operate)
