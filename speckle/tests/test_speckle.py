@@ -136,9 +136,15 @@ class TestMiscSpeckleFunctions(unittest.TestCase):
         self.__root: str = 'TESTING'
 
         # Ensure that the testing files exists
-        self.assertTrue(os.path.exists('tests/' + self.avi_path))
-        self.assertTrue(os.path.exists('tests/' + self.speckles_path))
-        self.assertTrue(os.path.exists('tests/' + self.tracks_path))
+        self.assertTrue(
+            os.path.exists(
+                os.path.join('tests', self.avi_path)))
+        self.assertTrue(
+            os.path.exists(
+                os.path.join('tests', self.speckles_path)))
+        self.assertTrue(
+            os.path.exists(
+                os.path.join('tests', self.tracks_path)))
 
         # Create testing dir
         if not os.path.isdir(self.__root):
@@ -149,12 +155,14 @@ class TestMiscSpeckleFunctions(unittest.TestCase):
         self.files: List[str] = ['a.txt', 'b.txt', 'C/c.txt']
 
         # Copy testing files to testing dir
-        shutil.copy('tests/' + self.avi_path,
-                    self.__root + '/' + self.avi_path + '.avi')
-        shutil.copy('tests/' + self.speckles_path,
-                    self.__root + '/' + self.speckles_path)
-        shutil.copy('tests/' + self.tracks_path,
-                    self.__root + '/' + self.tracks_path)
+        shutil.copy(os.path.join('tests', self.avi_path),
+                    os.path.join(
+                        self.__root, self.avi_path + '.avi'))
+        shutil.copy(os.path.join('tests', self.speckles_path),
+                    os.path.join(
+                        self.__root, self.speckles_path))
+        shutil.copy(os.path.join('tests', self.tracks_path),
+                    os.path.join(self.__root, self.tracks_path))
 
         self.avi_path += '.avi'
 

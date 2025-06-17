@@ -68,7 +68,7 @@ def main(args: List[str]) -> int:
         elif 'tracks' not in file:
             print(f'Rejected non-tracks file {file}')
             return
-        elif '/graphs/' in file:
+        elif 'graphs' in file:
             print(f'Rejected graph file {file}')
             return
 

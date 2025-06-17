@@ -76,7 +76,7 @@ def main(args: List[str]) -> int:
         :param root: The folder to use
         '''
 
-        if root.endswith('/graphs'):
+        if root.endswith('graphs'):
             print(f'Skipping graph dir {root}')
             return
 
@@ -115,7 +115,8 @@ def main(args: List[str]) -> int:
 
         for file in fixed_files:
 
-            df: pd.DataFrame = pd.read_csv(root + '/' + file)
+            df: pd.DataFrame = pd.read_csv(
+                os.path.join(root, file))
             df.drop(inplace=True, labels=[0, 1, 2])
 
             cur_speeds: List[float] = []
@@ -151,7 +152,9 @@ def main(args: List[str]) -> int:
 
         plt.errorbar(v_lines[:len(means)], means, yerr=stds)
 
-        plt.savefig(root.replace('/', '_') + '_speckle_scatter.png')
+        plt.savefig(
+            root.replace('/', '_').replace('\\', '_')
+            + '_speckle_scatter.png')
 
         plt.clf()
 
@@ -160,7 +163,9 @@ def main(args: List[str]) -> int:
         plt.plot(labels, means)
         plt.errorbar(labels, means, yerr=stds)
 
-        plt.savefig(root.replace('/', '_') + '_speckle_plot.png')
+        plt.savefig(
+            root.replace('/', '_').replace('\\', '_')
+            + '_speckle_plot.png')
 
         # Simple plot CSV version
         d: Dict[str, List[Any]] = {}
@@ -169,9 +174,12 @@ def main(args: List[str]) -> int:
         d['SLS_MEAN'] = means
         d['SLS_STD'] = stds
 
-        pd.DataFrame(d).to_csv(root.replace('/', '_') + '_speckle_plot.csv')
+        pd.DataFrame(d).to_csv(
+            root.replace('/', '_').replace('\\', '_')
+            + '_speckle_plot.csv')
 
-    speckle.for_each_dir(do_root_folder, root_folder, folder_pattern)
+    speckle.for_each_dir(
+        do_root_folder, root_folder, folder_pattern)
 
     return 0
 

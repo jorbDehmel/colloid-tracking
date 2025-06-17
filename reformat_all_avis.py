@@ -34,7 +34,7 @@ def main(args: List[str]) -> int:
     :returns: 0 upon success, error code upon failure.
     '''
 
-    print('This script will recurively crawl through a folder',
+    print('This script will recursively crawl through a folder',
           'and reformat all *.avi files within. It will save a',
           'copy of this output in the folder where the ',
           'original was, AS WELL AS to some specified backup',
@@ -75,13 +75,13 @@ def main(args: List[str]) -> int:
 
         # This includes the fully-qualified system path of a file
         # in its copied name, allowing disambiguation later on.
-        # This is called both "mangling" and "name disambiguation".
         mangled_name: str = what.replace(
-            ' ', '_').replace('/', '_').replace('\\', '_').lower()
+            ' ', '_').replace('/', '_').replace('\\', '_'
+                                                ).lower()
 
         # Copy the mangled name to the backup folder.
-        shutil.copy(what + '_rf.avi', backup_avi_folder +
-                    '/' + mangled_name)
+        shutil.copy(what + '_rf.avi',
+                    os.path.join(backup_avi_folder, mangled_name))
 
     # Run w/ given parameters
     speckle.for_each_file(reformat_avi_file, args[2], r'.*\.avi')

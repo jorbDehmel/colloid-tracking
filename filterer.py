@@ -51,6 +51,7 @@ col_names = ['TRACK_DISPLACEMENT',
 import sys
 from time import time
 from typing import List, Tuple, Union, Optional, Any
+import os
 from os import chdir, getcwd, sep
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -86,7 +87,7 @@ quality_percentile_filter: float = 50.0
 conversion: float = 4 * 0.32
 
 # Tends to work well
-# Activates the brownian straight-line-speed threshold filter
+# Activates the Brownian straight-line-speed threshold filter
 # If active, removes any particle below Brownian mean
 # straight-line-speed
 do_speed_thresh: bool = True
@@ -111,13 +112,13 @@ do_duration_thresh: bool = True
 duration_threshold: int = 65
 
 # If not None, also save graphs and .csv files here
-secondary_save_path: str = '/home/jorb/Programs/physicsScripts'
+secondary_save_path: str = os.getcwd()
 
 # If true, will only print warnings and errors
 silent: bool = True
 
-# If true, uses the given brownian speed fallback when no
-# brownian file can be detected. This should not be an issue,
+# If true, uses the given Brownian speed fallback when no
+# Brownian file can be detected. This should not be an issue,
 # so long as the regular expressions match the Brownian file.
 do_speed_thresh_fallback: bool = False
 brownian_speed_threshold_fallback: float = 0.042114570268546765
@@ -190,9 +191,10 @@ def do_file(name: str,
             displacement_threshold: float = 0.0,
             speed_threshold: float = 0.0,
             linearity_threshold: float = 0.0,
-            std_drop_flags: List[bool] = None,
-            iqr_drop_flags: List[bool] = None,
-            return_label: bool = False) -> ([float], [float]):
+            std_drop_flags: Optional[List[bool]] = None,
+            iqr_drop_flags: Optional[List[bool]] = None,
+            return_label: bool = False
+            ) -> Tuple[[float], [float]]:
     '''
     Analyze a file with a given name, and return the results
     If speed_threshold is nonzero, any track with less speed will
@@ -499,7 +501,7 @@ def do_file(name: str,
 
     del backup
 
-    csv.to_csv(name.replace('/', '_') + '.filtered.csv')
+    csv.to_csv(name.replace('/', '_').replace('\\', '_') + '.filtered.csv')
 
     # Compile output data from filtered inputs
     final_num_rows: int = len(csv)
@@ -550,12 +552,12 @@ def do_file(name: str,
 
         lgd = plt.legend(bbox_to_anchor=(1.1, 1.05))
 
-        plt.savefig(name.replace('/', '_') + str(save_num) + '.png',
+        plt.savefig(name.replace('/', '_').replace('\\', '_') + str(save_num) + '.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + '/' + name.replace('/', '_')
-                        + str(save_num) + '.png',
+            plt.savefig(os.path.join(secondary_save_path, name.replace('/', '_').replace('\\', '_')
+                        + str(save_num) + '.png'),
                         bbox_extra_artists=(lgd,), bbox_inches='tight')
 
         plt.close()
@@ -564,7 +566,7 @@ def do_file(name: str,
                                              'CSV_TRACK_ROW_NUMBER',
                                              'MEAN_STRAIGHT_LINE_SPEED',
                                              'REASON'])
-        dropped.to_csv(name.replace('/', '_') + str(save_num) + '.csv')
+        dropped.to_csv(name.replace('/', '_').replace('\\', '_') + str(save_num) + '.csv')
         dropped.to_csv(str(save_num) + '_dropped_tracks' + '.csv')
 
     if do_filter_scatter_plots:
@@ -629,10 +631,10 @@ def do_file(name: str,
             + str(len(dropped_row_indices))))
 
         if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + '/'
-                        + name.replace('/', '_') +
-                        str(save_num) + '_track_scatter.png')
-        plt.savefig(name.replace('/', '_')
+            plt.savefig(os.path.join(secondary_save_path,
+                        name.replace('/', '_').replace('\\', '_') +
+                        str(save_num) + '_track_scatter.png'))
+        plt.savefig(name.replace('/', '_').replace('\\', '_')
                     + str(save_num) + '_track_scatter.png',
                     bbox_extra_artists=(lgd,), bbox_inches='tight')
 
@@ -741,8 +743,8 @@ def graph_column_with_bars(table: pd.DataFrame,
     plt.savefig(file_name)
 
     if secondary_save_path is not None:
-        plt.savefig(secondary_save_path + '/' +
-                    name_fixer.get_cwd() + '_' + file_name)
+        plt.savefig(os.path.join(secondary_save_path,
+                    name_fixer.get_cwd() + '_' + file_name))
 
     return True
 
@@ -788,8 +790,8 @@ def main() -> int:
                 'Using fallback patterns; \
                 This could lead to picking up spots files instead of tracks.')
 
-        names: List[str] = name_fixer.fix_names(fallback_patterns)
-        has_control: bool = names[0] is not None
+        names = name_fixer.fix_names(fallback_patterns)
+        has_control = names[0] is not None
 
         # Drop any files which do not exist
         names = [name for name in names if name is not None]
@@ -832,7 +834,7 @@ def main() -> int:
             brownian_linearity_threshold = array[0][6]
 
         else:
-            start: float = time()
+            start = time()
 
             array[i], std_array[i] = do_file(folder + sep + name,
                                              brownian_displacement_threshold,
@@ -841,7 +843,7 @@ def main() -> int:
                                              do_std_filter_flags,
                                              do_iqr_filter_flags)
 
-            end: float = time()
+            end = time()
 
             if i == 0 and do_speed_thresh_fallback:
                 brownian_speed_threshold = brownian_speed_threshold_fallback
@@ -869,10 +871,10 @@ def main() -> int:
     std_csv.to_csv('track_data_summary_stds.csv')
 
     if secondary_save_path is not None:
-        out_csv.to_csv(secondary_save_path + '/' +
-                       name_fixer.get_cwd() + 'track_data_summary.csv')
-        std_csv.to_csv(secondary_save_path + '/' +
-                       name_fixer.get_cwd() + 'track_data_summary_stds.csv')
+        out_csv.to_csv(os.path.join(secondary_save_path,
+                       name_fixer.get_cwd() + 'track_data_summary.csv'))
+        std_csv.to_csv(os.path.join(secondary_save_path,
+                       name_fixer.get_cwd() + 'track_data_summary_stds.csv'))
 
     plt.clf()
     plt.rc('font', size=6)
@@ -885,7 +887,7 @@ def main() -> int:
 
     plt.savefig('TRACK_COUNT.png')
     if secondary_save_path is not None:
-        plt.savefig(secondary_save_path + '/TRACK_COUNT.png')
+        plt.savefig(os.path.join(secondary_save_path, 'TRACK_COUNT.png'))
 
     plt.close()
 
@@ -924,7 +926,7 @@ def main() -> int:
 
         csv: pd.DataFrame = pd.DataFrame(everything, columns=everything_labels)
         if secondary_save_path is not None:
-            csv.to_csv(secondary_save_path + '/all_tracks.csv')
+            csv.to_csv(os.path.join(secondary_save_path, 'all_tracks.csv'))
         csv.to_csv('all_tracks.csv')
 
         temp: List[str] = []
@@ -982,8 +984,8 @@ def main() -> int:
                 len(only_lost_x))))
 
         if secondary_save_path is not None:
-            plt.savefig(secondary_save_path + '/' +
-                        name_fixer.get_cwd() + '_filter_scatter.png')
+            plt.savefig(os.path.join(secondary_save_path,
+                        name_fixer.get_cwd() + '_filter_scatter.png'))
         plt.savefig(name_fixer.get_cwd() + '_filter_scatter.png')
 
         plt.close()
@@ -1006,8 +1008,8 @@ def main() -> int:
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
             if secondary_save_path is not None:
-                plt.savefig(secondary_save_path + '/' +
-                            name_fixer.get_cwd() + '_filtered_scatter.png')
+                plt.savefig(os.path.join(secondary_save_path,
+                            name_fixer.get_cwd() + '_filtered_scatter.png'))
             plt.savefig(name_fixer.get_cwd() + '_filtered_scatter.png')
 
             plt.close()
@@ -1029,8 +1031,8 @@ def main() -> int:
             plt.ylabel('Mean Straight Line Speed (Pixels / Frame)')
 
             if secondary_save_path is not None:
-                plt.savefig(secondary_save_path + '/' +
-                            name_fixer.get_cwd() + '_lost_scatter.png')
+                plt.savefig(os.path.join(secondary_save_path,
+                            name_fixer.get_cwd() + '_lost_scatter.png'))
             plt.savefig(name_fixer.get_cwd() + '_lost_scatter.png')
 
             plt.close()

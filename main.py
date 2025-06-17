@@ -4,8 +4,10 @@ Entry script for simplifying the process
 
 import sys
 import os
-from typing import List
+from typing import List, Callable
+import shutil
 from shutil import rmtree
+import subprocess
 
 import reformat_all_avis
 import rescale_speckles
@@ -15,6 +17,33 @@ import speckle_graphing
 import comparisons
 import speckle_const_sls_filter
 import collate_without_graphing
+
+from speckle import for_each_file, for_each_dir
+
+
+def move(src: str, dest: str) -> None:
+    '''
+    Move from some source file to some destination file
+    '''
+
+    if src == dest:
+        return
+
+    try:
+
+        if os.path.isdir(dest):
+            dest = os.path.join(dest, os.path.basename(src))
+
+        if os.path.exists(dest):
+            if os.path.isdir(dest):
+                rmtree(dest)
+            else:
+                os.remove(dest)
+
+        shutil.move(src, dest)
+
+    except:
+        print(f'Failed to move {src} to {dest}')
 
 
 def main() -> int:
@@ -36,13 +65,15 @@ def main() -> int:
 
     # Do system checks
     if os.name != 'posix':
-        print('Cannot run on non-POSIX system! This means ' +
-              'that you are running on Windows and not a ' +
-              'UNIX shell: Please install Windows Subsystem ' +
-              'for Linux (WSL). Then try again from within a ' +
-              'WSL shell.\n' +
+        print('Warning: Not designed to run on non-POSIX ' +
+              'system! This means that you are running on ' +
+              'Windows and not a UNIX shell: Please install ' +
+              'Windows Subsystem for Linux (WSL). Then try ' +
+              'again from within a WSL shell. If you ' +
+              'continue on Windows, this script may not ' +
+              'work.\n\n'
               'https://learn.microsoft.com/en-us/windows/wsl' +
-              '/install')
+              '/install\n\n')
 
     where_to_operate: str = input('Path to folder: ')
     where_to_operate = os.path.realpath(where_to_operate)
@@ -61,26 +92,21 @@ def main() -> int:
         print('Note: Running this on already-formatted files ' +
               'will have no effect.\n')
 
-        if os.system('ffmpeg -version > /dev/null') != 0:
+        if subprocess.run(
+                ['ffmpeg', '-version'],
+                stdout=None, stderr=None).returncode != 0:
             print('Missing package "ffmpeg". Please use your ' +
-                  'local package manager to install it.')
-            return -256
+                  'local package manager to install it. If ' +
+                  'an error occurred, this is the reason!')
 
         # Make everything (recursively) lowercase
-        # (Embarrassingly brute-force way.
-        # Turn your head, anyone who respects me)
-        for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ':
-            cmd: str = (f'find {where_to_operate} -depth ' +
-                        f'-iname "*{c}*" -exec rename --all ' +
-                        f'"{c}" "{c.lower()}" "{{}}" \\;')
-            assert os.system(cmd) == 0
+        def lowercase_no_space(fp: str) -> None:
+            if fp != fp.lower().replace(' ', ''):
+                move(fp, fp.lower().replace(' ', ''))
+        for_each_dir(lowercase_no_space, where_to_operate)
+        for_each_file(lowercase_no_space, where_to_operate)
 
-        # Remove spaces
-        assert os.system(
-            f'find {where_to_operate} -depth -iname "* *" ' +
-            '-exec rename --all " " "" {} \\;') == 0
-
-        save_location: str = '/tmp/reformat_all_avis/'
+        save_location: str = 'reformat_all_avis'
 
         if not os.path.exists(save_location):
             os.mkdir(save_location)
@@ -101,15 +127,13 @@ def main() -> int:
         ).lower() == 'y'
 
         if do_erase:
-            # Delete originals
-            os.system(f'find {where_to_operate} -type f ' +
-                      '-iname "*.avi" -not -iname "*_rf.avi" ' +
-                      '-exec rm -f "{}" \\;')
-
-            # Rename reformatted files to be originals
-            os.system(f'find {where_to_operate} -type f ' +
-                      '-iname "*_rf.avi" ' +
-                      '-exec rename "_rf.avi" "" "{}" \\;')
+            # Delete originals and rename reformatted files to
+            # be the originals
+            def remove_and_replace(fp: str) -> None:
+                if fp.endswith('.avi') and not \
+                        fp.endswith('_rf.avi'):
+                    move(fp, fp.replace('_rf.avi', ''))
+            for_each_file(remove_and_replace, where_to_operate)
 
         print('\nDone with preprocessing. Please use ' +
               'SpeckleTrackerJ to analyze the videos, then ' +
@@ -162,11 +186,13 @@ def main() -> int:
 
             collate_without_graphing.main(
                 ['', where_to_operate,
-                    where_to_operate + '/filtered_means.csv',
+                    os.path.join(
+                        where_to_operate, 'filtered_means.csv'),
                     r'.*(filtered|control.*)\.csv'])
             collate_without_graphing.main(
                 ['', where_to_operate,
-                    where_to_operate + '/all_means.csv', ''])
+                    os.path.join(
+                        where_to_operate, 'all_means.csv'), ''])
             print('Means and stds have been collated.')
 
         if input('Graph? [y/N]: ').lower()[0] != 'y':
@@ -192,24 +218,39 @@ def main() -> int:
                 os.mkdir('graphs')
 
             # Create graphs
-            assert speckle_graphing.main(
-                ['', '.', '.*',
-                 '.*(filtered|control).*']) == 0
+            try:
+                speckle_graphing.main(
+                    ['', '.', '.*',
+                    '.*(filtered|control).*'])
+            except:
+                print('Failed to graph!')
 
             assert comparisons.main(
                 ['', '.', '.',
                  '.*(filtered|control).*']) == 0
 
-            assert os.system('mv *.csv *.png graphs/') == 0
+            if not os.path.exists('graphs'):
+                os.mkdir('graphs')
+
+            for f in os.listdir():
+                if f.endswith('.csv') or f.endswith('.png'):
+                    move(f, 'graphs')
 
             # Rename graphs
-            all_items: List[str] = os.listdir('graphs/')
+            all_items: List[str] = os.listdir('graphs')
 
             common_prefix: str = os.path.commonprefix(all_items)
 
-            assert os.system(
-                'find graphs -type f -exec ' +
-                f'rename "{common_prefix}" "" {{}} \\;') == 0
+            def remove_common_prefix(fp: str) -> None:
+                '''
+                Removes the common prefix from the given filepath
+                '''
+
+                if fp != fp.replace(common_prefix, ''):
+                    move(fp, fp.replace(common_prefix, ''))
+
+            if common_prefix:
+                for_each_file(remove_common_prefix)
 
             os.chdir(old_dir)
 
@@ -220,16 +261,23 @@ def main() -> int:
         if not os.path.exists('graphs'):
             os.mkdir('graphs')
 
-        assert os.system('mv *.csv *.png graphs/') == 0
+        for f in os.listdir():
+            if f.endswith('.csv') or f.endswith('.png'):
+                move(f, 'graphs')
 
         # Rename graphs
-        all_items: List[str] = os.listdir('graphs')
+        all_items = os.listdir('graphs')
 
-        common_prefix: str = os.path.commonprefix(all_items)
+        common_prefix = os.path.commonprefix(all_items)
 
-        assert os.system(
-            'find graphs -type f -exec rename ' +
-            f'"{common_prefix}" "" {{}} \\;') == 0
+        def remove_common_prefix(fp: str) -> None:
+            '''
+            Removes the common prefix from the given filepath
+            '''
+
+            move(fp, fp.replace(common_prefix, ''))
+
+        for_each_file(remove_common_prefix)
 
     print('Done!')
 

@@ -13,6 +13,7 @@ jdehmel@outlook.com
 '''
 
 import sys
+import os
 import re
 from typing import List, Dict, Tuple
 import pandas as pd
@@ -143,7 +144,7 @@ def graph_each_frequency(root: str,
             elif not file.endswith('.csv'):
                 print(f'Rejected file {file}')
                 return
-            elif '/graphs/' in file:
+            elif 'graphs' in file:
                 print(f'Rejected file {file}')
                 return
 
@@ -215,9 +216,11 @@ def graph_each_frequency(root: str,
                      yerr=[stds[key] for key in keys])
 
         plt.legend()
-        plt.savefig(saveat + '/'
-                    + clean_pattern(frequency, '', '.')
-                    + '_chamber_height.png')
+        plt.savefig(
+            os.path.join(
+                saveat,
+                clean_pattern(frequency, '', '.') +
+                '_chamber_height.png'))
 
         plt.close()
 
@@ -230,9 +233,8 @@ def graph_each_frequency(root: str,
             'HEIGHT': cleaned_keys,
             'MEAN_STRAIGHT_LINE_SPEED': [means[key] for key in keys],
             'STRAIGHT_LINE_SPEED_STD': [stds[key] for key in keys],
-        }).to_csv(saveat + '/'
-                  + clean_pattern(frequency, '', '.')
-                  + '_chamber_height.csv')
+        }).to_csv(os.path.join(saveat, clean_pattern(frequency, '', '.')
+                  + '_chamber_height.csv'))
 
     plt.clf()
 
@@ -247,7 +249,9 @@ def graph_each_frequency(root: str,
                      label=clean_pattern(frequency))
 
     plt.legend(bbox_to_anchor=(1, 1), loc="upper left")
-    plt.savefig(saveat + '/chamber_height.png', bbox_inches='tight')
+    plt.savefig(
+        os.path.join(saveat, 'chamber_height.png'),
+        bbox_inches='tight')
 
     plt.close()
 

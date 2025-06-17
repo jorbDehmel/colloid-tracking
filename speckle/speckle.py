@@ -197,12 +197,12 @@ def for_each_file(apply: Callable[[str], None],
     visited: List[str] = []
 
     # Walk all files recursively in the current directory
-    for root, _, files in os.walk(folder):
+    for root, _, files in os.walk(folder, topdown=True):
 
         # For each file (not directory) in the cwd
         for file in files:
-
-            full_name: str = os.path.realpath(root + '/' + file)
+            full_name: str = os.path.realpath(
+                os.path.join(root, file))
 
             if match(matching, full_name) and full_name not in visited:
                 apply(full_name)
@@ -225,12 +225,12 @@ def for_each_dir(apply: Callable[[str], None],
     visited: List[str] = []
 
     # Walk all files recursively in the current directory
-    for root, dirnames, _ in os.walk(folder):
+    for root, dirnames, _ in os.walk(folder, topdown=True):
 
         # For each directory in the cwd
         for dir_name in dirnames:
-
-            full_name: str = os.path.realpath(root + '/' + dir_name)
+            full_name: str = os.path.realpath(
+                os.path.join(root, dir_name))
 
             if match(matching, full_name) and full_name not in visited:
                 apply(full_name)
