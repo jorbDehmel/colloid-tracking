@@ -41,7 +41,7 @@ def main(argv: List[str]) -> int:
                                             '_tracks.csv')
             speckle.process_file(
                 name,
-                '/tmp/junk.csv',
+                'junk.csv',
                 to_filepath,
                 1.0)  # DO NOT USE ADJUSTMENT COEFFICIENT != 1.0
 

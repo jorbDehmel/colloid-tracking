@@ -249,8 +249,9 @@ def main(argv: List[str]) -> int:
     print(f'Reformatting files from {inp_w}p to {out_w}p in',
           f'folder {folder}.')
 
-    assert input('Is this okay (if so, type "YES, DO IT"): ') \
-        == 'YES, DO IT', 'Aborting...'
+    assert input(
+        'This is a potentially destructive action! Are you sure? [y/N] ') \
+        == 'y', 'Aborting...'
 
     count: int = 0
 

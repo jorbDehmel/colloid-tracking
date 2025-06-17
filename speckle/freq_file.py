@@ -150,7 +150,7 @@ class FreqFile:
 
         for track in self.tracks:
             out += f'{track.sls()}\t{track.displacement()}' + \
-                   f'\t{track.duration()}\n'
+                f'\t{track.duration()}\n'
 
         out += f'(Plus {len(self.erased)} erased tracks)'
 
