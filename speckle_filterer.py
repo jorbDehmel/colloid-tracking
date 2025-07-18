@@ -143,6 +143,62 @@ def main(args: List[str]) -> int:
         # Call our function which operates on each file
         s.for_each_file(filter_single_file, dir_path, r'.*track.*\.csv')
 
+        # Extract brownian threshold (MSD)
+        threshold = control.msd_mean() + k * control.msd_std()
+
+        def filter_single_file_MSD(file_path: str) -> None:
+            '''
+            Apply filters to this path, which is a single
+            frequency file.
+            '''
+
+            nonlocal total_dropped, total_remaining, files_skipped
+
+            file_path = os.path.realpath(file_path)
+
+            print(f'Operating on file "{file_path}"')
+
+            # Do not operate on control files
+            if os.path.samefile(file_path, fq_control_path):
+                return
+
+            if re.findall(control_pattern, file_path):
+                return
+
+            # Do not operate on already-filtered files
+            if 'filtered' in file_path:
+                return
+
+            # Do not operate on non-csv's
+            if not file_path.endswith('.csv'):
+                return
+
+            # IDK why this is necessary?
+            if file_path in files_done:
+                return
+
+            files_done.append(file_path)
+
+            # Load file into FreqFile object
+            contents: s.FreqFile = s.load_frequency_file(file_path)
+
+            # Apply Brownian MSD filter
+            dropped, remaining = contents.filter(f.msd_threshold_filter,
+                                                 msd_threshold=threshold)
+
+            total_dropped += dropped
+            total_remaining += remaining
+
+            if remaining == 0:
+                files_skipped.append(file_path)
+                return
+
+            # Save as modified file
+            contents.save_tracks(file_path + '.msd.filtered.csv')
+
+        # Call our function which operates on each file
+        s.for_each_file(filter_single_file_MSD, dir_path, r'.*track.*\.csv')
+
     code: int = 0
 
     try:

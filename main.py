@@ -223,11 +223,14 @@ def main() -> int:
                     ['', '.', '.*',
                     '.*(filtered|control).*'])
             except:
-                print('Failed to graph!')
+                print('Failed to graph (pt 1)!')
 
-            assert comparisons.main(
-                ['', '.', '.',
-                 '.*(filtered|control).*']) == 0
+            try:
+                assert comparisons.main(
+                    ['', '.', '.',
+                    '.*(filtered|control).*']) == 0
+            except:
+                print('Failed to graph (pt 2)!')
 
             if not os.path.exists('graphs'):
                 os.mkdir('graphs')
@@ -254,8 +257,11 @@ def main() -> int:
 
             os.chdir(old_dir)
 
-        assert comparisons.main(
-            ['', '.', '.', '.*(filtered|control).*']) == 0
+        try:
+            assert comparisons.main(
+                ['', '.', '.', '.*(filtered|control).*']) == 0
+        except:
+            print('Failed to graph (pt 3)')
 
         # Organize graphs
         if not os.path.exists('graphs'):
