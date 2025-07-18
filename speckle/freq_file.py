@@ -5,7 +5,7 @@ it. This module also defines the BasicTrack class, which is a
 track loaded from a "Tracks"-formatted csv file, rather than a
 "speckle"-formatted one.
 
-Jordan Dehmel, 2024
+Jordan Dehmel, 2024-2025
 jedehmel@mavs.coloradomesa.edu
 jdehmel@outlook.com
 '''
@@ -131,6 +131,8 @@ class FreqFile:
         d['TRACK_DISPLACEMENT'] = dummy + [track.displacement()
                                            for track in self.tracks]
         d['MEAN_STRAIGHT_LINE_SPEED'] = dummy + [track.sls()
+                                                 for track in self.tracks]
+        d['MEAN_SQUARED_DISPLACEMENT'] = dummy + [track.msd()
                                                  for track in self.tracks]
 
         # Construct DataFrame

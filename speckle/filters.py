@@ -1,7 +1,7 @@
 '''
 Some essential filters for the speckle package.
 
-Jordan Dehmel, 2024
+Jordan Dehmel, 2024-2025
 jedehmel@mavs.coloradomesa.edu
 jdehmel@outlook.com
 '''
@@ -33,11 +33,37 @@ def sls_threshold_filter(track: Union[s.Track, s.BasicTrack],
     '''
 
     keywords: Dict[str, Any] = kwargs
-    assert 'sls_threshold' in keywords, 'Must provide `threshold` as a kwarg'
+    assert 'sls_threshold' in keywords, 'Must provide `sls_threshold` as a kwarg'
     sls_threshold: float = keywords['sls_threshold']
 
     # If this track's SLS is less than the threshold, remove it
     if track.sls() < sls_threshold:
+        return True
+
+    # Otherwise, keep it
+    return False
+
+
+@speckle_filter
+def msd_threshold_filter(track: Union[s.Track, s.BasicTrack],
+                         **kwargs: Any) -> bool:
+    '''
+    Returns true if the given track should be removed by the
+    Brownian filter. Expects a definition for 'msd_threshold' in
+    kwargs.
+
+    :param track: The track in question.
+    :param kwargs: Additional keyword arguments.
+    :returns: True if this track should be removed, False
+        if it should be kept.
+    '''
+
+    keywords: Dict[str, Any] = kwargs
+    assert 'msd_threshold' in keywords, 'Must provide `msd_threshold` as a kwarg'
+    msd_threshold: float = keywords['msd_threshold']
+
+    # If this track's SLS is less than the threshold, remove it
+    if track.msd() < msd_threshold:
         return True
 
     # Otherwise, keep it

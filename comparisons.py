@@ -107,134 +107,125 @@ def graph_each_frequency(root: str,
         these operations.
     '''
 
-    column_name: str = 'MEAN_STRAIGHT_LINE_SPEED'
-    all_data: Dict[str, Tuple[List[str], List[float], List[float]]] = {}
+    for column_name in ['MEAN_STRAIGHT_LINE_SPEED', 'MEAN_SQUARED_DISPLACEMENT']:
+        all_data: Dict[str, Tuple[List[str], List[float], List[float]]] = {}
 
-    # Used for comparing SLS and MSD
-    all_sls: List[float] = []
-    all_msd: List[float] = []
+        # Iterate over frequency patterns
+        for frequency in frequencies:
 
-    # Iterate over frequency patterns
-    for frequency in frequencies:
+            print(f'Frequency {clean_pattern(frequency, "")}')
 
-        print(f'Frequency {clean_pattern(frequency, "")}')
+            means: Dict[str, float] = {}
+            stds: Dict[str, float] = {}
+            title: str = ''
 
-        means: Dict[str, float] = {}
-        stds: Dict[str, float] = {}
-        title: str = ''
+            def do_single_frequency_file(file: str) -> None:
+                '''
+                Loads a single frequency's tracks file and loads the
+                mean and std for straight line speed. Appends this
+                information to external variables.
 
-        def do_single_frequency_file(file: str) -> None:
-            '''
-            Loads a single frequency's tracks file and loads the
-            mean and std for straight line speed. Appends this
-            information to external variables.
+                :param file: The file to operate on.
+                '''
 
-            :param file: The file to operate on.
-            '''
+                nonlocal means, stds, title
 
-            nonlocal means, stds, title, all_sls, all_msd
+                # Skip non-matching
+                if not re.findall(pattern, file):
+                    print(f'Rejected file {file}')
+                    return
+                elif 'ANOMALY' in file:
+                    print(f'Rejected file {file}')
+                    return
+                elif not file.endswith('.csv'):
+                    print(f'Rejected file {file}')
+                    return
+                elif 'graphs' in file:
+                    print(f'Rejected file {file}')
+                    return
 
-            # Skip non-matching
-            if not re.findall(pattern, file):
-                print(f'Rejected file {file}')
-                return
-            elif 'ANOMALY' in file:
-                print(f'Rejected file {file}')
-                return
-            elif not file.endswith('.csv'):
-                print(f'Rejected file {file}')
-                return
-            elif 'graphs' in file:
-                print(f'Rejected file {file}')
-                return
+                print(f'Accepted file {file}')
+                title = file
 
-            print(f'Accepted file {file}')
-            title = file
+                # Load tracks file
+                tracks: pd.DataFrame = pd.read_csv(file)
+                tracks.drop([0, 1, 2], inplace=True)
 
-            # Load tracks file
-            tracks: pd.DataFrame = pd.read_csv(file)
-            tracks.drop([0, 1, 2], inplace=True)
+                speeds = tracks[column_name].astype(float)
 
-            speeds = tracks[column_name].astype(float)
+                # Calculate mean MEAN_STRAIGHT_LINE_SPEED
+                mean: float = speeds.mean()
 
-            if 'MEAN_SQUARED_DISPLACEMENT' in tracks:
-                all_sls += list(speeds)
-                all_msd += list(
-                    tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float))
-            else:
-                print('Failed to find MSD entries.')
+                # Calculate std MEAN_STRAIGHT_LINE_SPEED
+                std: float = speeds.std()
 
-            # Calculate mean MEAN_STRAIGHT_LINE_SPEED
-            mean: float = speeds.mean()
+                # Extract friendlier chamber height label for the
+                # graph x-axis
+                label: str = file
+                for height_pattern in z_position_filters:
 
-            # Calculate std MEAN_STRAIGHT_LINE_SPEED
-            std: float = speeds.std()
+                    if re.findall(height_pattern, file):
+                        label = height_pattern
+                        break
 
-            # Extract friendlier chamber height label for the
-            # graph x-axis
-            label: str = file
-            for height_pattern in z_position_filters:
+                if label in means or label in stds:
+                    print(f'Abandoning {file}')
+                    return
 
-                if re.findall(height_pattern, file):
-                    label = height_pattern
-                    break
+                # Append to `means` and `stds`
+                means[label] = mean
+                stds[label] = std
 
-            if label in means or label in stds:
-                print(f'Abandoning {file}')
-                return
+            # Fetch all the data from the current frequency pattern
+            speckle.for_each_file(do_single_frequency_file, root, '.*' + frequency)
 
-            # Append to `means` and `stds`
-            means[label] = mean
-            stds[label] = std
+            if len(means) == 0:
+                print(f'Skipping pattern {frequency}')
+                continue
 
-        # Fetch all the data from the current frequency pattern
-        speckle.for_each_file(do_single_frequency_file, root, '.*' + frequency)
+            # Fetch the list of keys in ascending order. This will
+            # be used several times later on.
+            keys: List[str] = list(means)
+            keys.sort(key=z_position_filters.index)
 
-        if len(means) == 0:
-            print(f'Skipping pattern {frequency}')
-            continue
+            cleaned_keys = [clean_pattern(key, '') for key in keys]
 
-        # Fetch the list of keys in ascending order. This will
-        # be used several times later on.
-        keys: List[str] = list(means)
-        keys.sort(key=z_position_filters.index)
+            # Graph the fetched data (this is a single frequency, by
+            # chamber height)
+            plt.clf()
 
-        cleaned_keys = [clean_pattern(key, '') for key in keys]
+            plt.title(clean_pattern(frequency) + column_name + f'\n{title}')
+            plt.xlabel('Chamber Height')
+            plt.ylabel(column_name)
 
-        # Graph the fetched data (this is a single frequency, by
-        # chamber height)
-        plt.clf()
+            plt.plot(cleaned_keys, [means[key] for key in keys],
+                    label=clean_pattern(frequency))
+            plt.errorbar(x=cleaned_keys,
+                        y=[means[key] for key in keys],
+                        yerr=[stds[key] for key in keys])
 
-        plt.title(clean_pattern(frequency) + f'\n{title}')
-        plt.xlabel('Chamber Height')
-        plt.ylabel('Mean Straight Line Speed')
+            plt.legend()
+            plt.savefig(
+                os.path.join(
+                    saveat,
+                    clean_pattern(frequency, '', '.') +
+                    column_name +
+                    '_by_chamber_height.png'))
 
-        plt.plot(cleaned_keys, [means[key] for key in keys],
-                 label=clean_pattern(frequency))
-        plt.errorbar(x=cleaned_keys,
-                     y=[means[key] for key in keys],
-                     yerr=[stds[key] for key in keys])
+            plt.close()
 
-        plt.legend()
-        plt.savefig(
-            os.path.join(
-                saveat,
-                clean_pattern(frequency, '', '.') +
-                '_chamber_height.png'))
+            if column_name == 'MEAN_STRAIGHT_LINE_SPEED':
+                all_data[frequency] = (cleaned_keys,
+                                    [means[key] for key in keys],
+                                    [stds[key] for key in keys])
 
-        plt.close()
-
-        all_data[frequency] = (cleaned_keys,
-                               [means[key] for key in keys],
-                               [stds[key] for key in keys])
-
-        # Save as csv file
-        pd.DataFrame(data={
-            'HEIGHT': cleaned_keys,
-            'MEAN_STRAIGHT_LINE_SPEED': [means[key] for key in keys],
-            'STRAIGHT_LINE_SPEED_STD': [stds[key] for key in keys],
-        }).to_csv(os.path.join(saveat, clean_pattern(frequency, '', '.')
-                  + '_chamber_height.csv'))
+            # Save as csv file
+            pd.DataFrame(data={
+                'HEIGHT': cleaned_keys,
+                'MEAN_' + column_name: [means[key] for key in keys],
+                column_name + '_STD': [stds[key] for key in keys],
+            }).to_csv(os.path.join(saveat, clean_pattern(frequency, '', '.')
+                    + column_name + '_by_chamber_height.csv'))
 
     plt.clf()
 

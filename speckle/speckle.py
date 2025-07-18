@@ -12,6 +12,11 @@ Mean Instantaneous Velocity = sum(magnitude(velocities))
 Mean Distance Traveled Speed = sum(magnitude(velocities))
                                / number of frames
 
+Mean Squared Displacement = sum(magnitude(
+                                position at frame t
+                                - position at frame 0
+                            ) ^ 2) / number of frames
+
 Capable of dropping any speckle track w/ duration under a
 certain threshold if so desired.
 '''

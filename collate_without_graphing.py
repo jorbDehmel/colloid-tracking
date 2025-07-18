@@ -37,8 +37,10 @@ def main(args: List[str]) -> int:
     pattern: str = args[3]
 
     # Where we will save data
-    means: Dict[str, float] = {}
-    stds: Dict[str, float] = {}
+    sls_means: Dict[str, float] = {}
+    sls_stds: Dict[str, float] = {}
+    msd_means: Dict[str, float] = {}
+    msd_stds: Dict[str, float] = {}
 
     def do_single_frequency_file(file: str) -> None:
         '''
@@ -49,9 +51,9 @@ def main(args: List[str]) -> int:
         :param file: The file to operate on.
         '''
 
-        nonlocal means, stds, pattern
+        nonlocal sls_means, sls_stds, msd_means, msd_stds, pattern
 
-        if file in means or file in stds:
+        if file in sls_means or file in sls_stds or file in msd_means or file in msd_stds:
             print(f'Skipping repeated file `{file}`')
             return
 
@@ -78,24 +80,32 @@ def main(args: List[str]) -> int:
         tracks: pd.DataFrame = pd.read_csv(file)
         tracks.drop([0, 1, 2], inplace=True)
 
-        speeds = \
+        sls_values = \
             tracks['MEAN_STRAIGHT_LINE_SPEED'].astype(float)
+        msd_values = \
+            tracks['MEAN_SQUARED_DISPLACEMENT'].astype(float)
 
         # Calculate mean MEAN_STRAIGHT_LINE_SPEED
-        mean: float = speeds.mean()
-
         # Calculate std MEAN_STRAIGHT_LINE_SPEED
-        std: float = speeds.std()
+        sls_mean: float = sls_values.mean()
+        sls_std: float = sls_values.std()
+
+        # Calculate mean MEAN_SQUARED_DISPLACEMENT
+        # Calculate std MEAN_SQUARED_DISPLACEMENT
+        msd_mean: float = msd_values.mean()
+        msd_std: float = msd_values.std()
 
         # Append to `means` and `stds`
-        means[file] = mean
-        stds[file] = std
+        sls_means[file] = sls_mean
+        sls_stds[file] = sls_std
+        msd_means[file] = msd_mean
+        msd_stds[file] = msd_std
 
     # Fetch all the data from the current frequency pattern
     speckle.for_each_file(
         do_single_frequency_file, root, pattern)
 
-    if len(means) == 0:
+    if len(sls_means) == 0:
         print('Failed to find any track data!')
         return 1
 
@@ -103,9 +113,14 @@ def main(args: List[str]) -> int:
     print(f'Saving collated data at {target}...')
 
     with open(target, mode='w', encoding='utf8') as f:
-        f.write('file,mean_SLS,SLS_std,\n')
-        for key, mean in means.items():
-            f.write(f'{key.removeprefix(root)},{mean},{stds[key]},\n')
+        f.write('file,mean_SLS,SLS_std,mean_MSD,MSD_std,\n')
+        for key, mean in sls_means.items():
+            assert key in msd_means
+            f.write(
+                f'{key.removeprefix(root)},{mean},'
+                f'{sls_stds[key]},{msd_means[key]},'
+                f'{msd_stds[key]},\n'
+            )
 
     return 0
 
