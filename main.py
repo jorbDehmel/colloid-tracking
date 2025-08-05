@@ -99,13 +99,6 @@ def main() -> int:
                   'local package manager to install it. If ' +
                   'an error occurred, this is the reason!')
 
-        # Make everything (recursively) lowercase
-        def lowercase_no_space(fp: str) -> None:
-            if fp != fp.lower().replace(' ', ''):
-                move(fp, fp.lower().replace(' ', ''))
-        for_each_dir(lowercase_no_space, where_to_operate)
-        for_each_file(lowercase_no_space, where_to_operate)
-
         save_location: str = 'reformat_all_avis'
 
         if not os.path.exists(save_location):

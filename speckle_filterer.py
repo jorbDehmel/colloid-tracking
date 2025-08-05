@@ -44,6 +44,9 @@ def main(args: List[str]) -> int:
         print('Please provide 1 command-line argument: The root folder.')
         return 1
 
+    do_sls_filter: bool = (input('Do SLS filter? [y/N]') == 'y')
+    do_msd_filter: bool = (input('Do MSD filter? [y/N]') == 'y')
+
     root: str = args[1]
     total_dropped: int = 0
     total_remaining: int = 0
@@ -88,7 +91,7 @@ def main(args: List[str]) -> int:
         control: s.FreqFile = s.load_frequency_file(fq_control_path)
 
         # Extract brownian threshold
-        threshold: float = control.sls_mean() + k * control.sls_std()
+        sls_threshold: float = control.sls_mean() + k * control.sls_std()
 
         def filter_single_file(file_path: str) -> None:
             '''
@@ -128,7 +131,7 @@ def main(args: List[str]) -> int:
 
             # Apply Brownian filter
             dropped, remaining = contents.filter(f.sls_threshold_filter,
-                                                 sls_threshold=threshold)
+                                                 sls_threshold=sls_threshold)
 
             total_dropped += dropped
             total_remaining += remaining
@@ -140,11 +143,14 @@ def main(args: List[str]) -> int:
             # Save as modified file
             contents.save_tracks(file_path + '.filtered.csv')
 
-        # Call our function which operates on each file
-        s.for_each_file(filter_single_file, dir_path, r'.*track.*\.csv')
+        if do_sls_filter:
+            # Call our function which operates on each file
+            s.for_each_file(filter_single_file, dir_path, r'.*track.*\.csv')
+        else:
+            print('NOT filtering by SLS')
 
         # Extract brownian threshold (MSD)
-        threshold = control.msd_mean() + k * control.msd_std()
+        msd_threshold = control.msd_mean() + k * control.msd_std()
 
         def filter_single_file_MSD(file_path: str) -> None:
             '''
@@ -184,7 +190,7 @@ def main(args: List[str]) -> int:
 
             # Apply Brownian MSD filter
             dropped, remaining = contents.filter(f.msd_threshold_filter,
-                                                 msd_threshold=threshold)
+                                                 msd_threshold=msd_threshold)
 
             total_dropped += dropped
             total_remaining += remaining
@@ -196,8 +202,11 @@ def main(args: List[str]) -> int:
             # Save as modified file
             contents.save_tracks(file_path + '.msd.filtered.csv')
 
-        # Call our function which operates on each file
-        s.for_each_file(filter_single_file_MSD, dir_path, r'.*track.*\.csv')
+        if do_msd_filter:
+            # Call our function which operates on each file
+            s.for_each_file(filter_single_file_MSD, dir_path, r'.*track.*\.csv')
+        else:
+            print('NOT filtering by MSD')
 
     code: int = 0
 
