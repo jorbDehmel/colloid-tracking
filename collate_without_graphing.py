@@ -8,6 +8,7 @@ import re
 from typing import List, Dict
 import pandas as pd
 import speckle
+from matplotlib import pyplot as plt
 
 
 def main(args: List[str]) -> int:
@@ -121,6 +122,15 @@ def main(args: List[str]) -> int:
                 f'{sls_stds[key]},{msd_means[key]},'
                 f'{msd_stds[key]},\n'
             )
+
+    # MSD vs SLS scatterplot
+    try:
+        plt.scatter(sls_means, msd_means)
+        plt.xlabel('Mean File SLS')
+        plt.ylabel('Mean File MSD')
+        plt.savefig('sls_vs_msd.png')
+    except:
+        print('Failed to plot MSD vs SLS')
 
     return 0
 
