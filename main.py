@@ -17,6 +17,7 @@ import speckle_graphing
 import comparisons
 import speckle_const_sls_filter
 import collate_without_graphing
+import msd_by_time
 
 from speckle import for_each_file, for_each_dir
 
@@ -185,8 +186,17 @@ def main() -> int:
             collate_without_graphing.main(
                 ['', where_to_operate,
                     os.path.join(
-                        where_to_operate, 'all_means.csv'), ''])
+                        where_to_operate, 'all_means.csv'),
+                    r'.*(filtered|control.*)\.csv'])
             print('Means and stds have been collated.')
+
+        # MSD by time log
+        if input('Save MSD by time file? [y/N]: ').lower()[0] == 'y':
+            print('Saving MSD by time file...')
+
+            msd_by_time.main(['', where_to_operate])
+
+            print('Finished logging MSD by time.')
 
         if input('Graph? [y/N]: ').lower()[0] != 'y':
             print('Exiting without graphing.')

@@ -27,6 +27,7 @@ import subprocess
 from typing import List, Union, Callable, Tuple
 from numpy import hypot
 import pandas as pd
+from io import StringIO
 
 
 class Track:
@@ -272,6 +273,50 @@ def reformat_avi(to_format_filepath: str,
     print(f'File {to_format_filepath} was re-encoded as mjpeg,',
           f'turned grayscale and resized to {processed_w} pixels,',
           f'with the result saved at {save_filepath}')
+
+
+def load_tracks(input_filepath: str) -> List[Track]:
+    '''
+    Given an input filepath, returns a list of tracks
+    '''
+
+    # Load input
+    text: str = ''
+    with open(input_filepath, 'rb') as file:
+        text = file.read().decode()
+
+    # Process
+    text = text.replace('\t', ',')
+    text = text.replace('\n', ',\n')
+
+    while ',,' in text:
+        text = text.replace(',,', ',')
+
+    # Load data
+    frame: pd.DataFrame = pd.read_csv(StringIO(text))
+
+    tracks: List[Track] = []
+    cur_track: Track = Track([], [], [])
+
+    is_first: bool = True
+    for row in frame.iterrows():
+        if is_first:
+            is_first = False
+            continue
+
+        if 'stop speckle' in row[0][0]:
+            tracks.append(cur_track)
+        elif 'start speckle' in row[0][0]:
+            cur_track = Track([], [], [])
+        else:
+            cur_track.append(float(row[0][0]), float(
+                row[0][1]), int(row[0][2]))
+
+    # Remove tracks below the duration threshold
+    tracks = [track for track in tracks if track.duration() >=
+                duration_threshold]
+
+    return tracks
 
 
 def process_file(input_filepath: str, spots_filepath: str,
